@@ -1,0 +1,19 @@
+---
+title: "About"
+image: profile.jpg
+about:
+  template: jolla
+  links:
+    - icon: twitter
+      text: Twitter
+      href: https://twitter.com/akashaapz
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/akash-prakash-544882124/
+    - icon: github
+      text: Github
+      href: https://github.com/akashprakas
+
+---
+
+Hi I am Akash! . This is the place where i write some of the stuffs I am interested in . I am interested in Computer Vision, Sensor Fusion , Computer Graphics and Self Driving Cars.

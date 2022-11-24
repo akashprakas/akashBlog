@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.269">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2022-11-23">
+
+<title>akashBlog - Simple Online RealTime Tracking</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">akashBlog</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../about.html">
+ <span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/akashprakas"><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/akashaapz"><i class="bi bi-twitter" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Simple Online RealTime Tracking</h1>
+                                <div class="quarto-categories">
+                <div class="quarto-category">jupyter</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">November 23, 2022</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#detection" id="toc-detection" class="nav-link" data-scroll-target="#detection">Detection</a>
+  <ul class="collapse">
+  <li><a href="#motion-model-and-why-we-need-it" id="toc-motion-model-and-why-we-need-it" class="nav-link" data-scroll-target="#motion-model-and-why-we-need-it">Motion Model and why we need it</a></li>
+  </ul></li>
+  <li><a href="#core-sort-loop" id="toc-core-sort-loop" class="nav-link" data-scroll-target="#core-sort-loop">Core Sort Loop</a>
+  <ul class="collapse">
+  <li><a href="#update-sort" id="toc-update-sort" class="nav-link" data-scroll-target="#update-sort">Update Sort</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>This is an overview of the implementation details of SORT tracking algorithh. The official implemenation of the <a href="https://arxiv.org/abs/1602.00763">paper</a> is present this <a href="https://github.com/abewley/sort">repo</a> . The paper pretty much explains its straightforward , i will be more walking through the implemenation details. In a top level SORT is a tracking algorithm which falls in the class of tracking by detection and the detection, assoaciation , tracking cycle is happening in the 2D image domain.</p>
+</section>
+<section id="detection" class="level2">
+<h2 class="anchored" data-anchor-id="detection">Detection</h2>
+<p>Sort is a tracking by detection algorithm. So the quality of the tracking will inturn depends on the quality of detector. In the officiall implementation repo, the author have already porvided detections from the MOT Benchmark. So in the implementation present in the repo we can treat the detector as a blackbox and use the detection information already present.</p>
+<section id="motion-model-and-why-we-need-it" class="level3">
+<h3 class="anchored" data-anchor-id="motion-model-and-why-we-need-it">Motion Model and why we need it</h3>
+<p>So we get detections in the current frame and we need to some how associate it to the detections from the previous frame. Seems like a place where we can put a Kalman filter into good use. So we use a kalman filter with constant velocity motion model and then we will treat the detections as measurements. The official implementation uses filterpy which is a python library with different kalman filter implementations.</p>
+<section id="state-variables-in-the-constant-velocity-model" class="level4">
+<h4 class="anchored" data-anchor-id="state-variables-in-the-constant-velocity-model">State Variables in the constant velocity model</h4>
+<p>So what are the state variables<br>
+u –&gt; the horizontal pixel location of center of target<br>
+v –&gt; the vertical pixel location of the center of target<br>
+s –&gt; area (width_bbox*height_bbox)<br>
+r –&gt; aspect ration (width_bbox/height_bbox)</p>
+<p>We assume a constant velocity model and also assume the aspect ratio also remains constant, our process and measurement models will be based on that.<br>
+The state variables are [u,v,s,r,u_dot,v_dot,s_dot] where u_dot,v_dot and s_dot represent the corresponding velocities. Since we are assuming a constant velocity model we can use the normal newtons equations.<br>
+u = u + u_dot * t<br>
+v = v + v_dot * t<br>
+s = s + s_dot * t<br>
+r = r<br>
+u_dot = u_dot<br>
+v_dot = v_dot<br>
+s_dot = s_dot</p>
+<p>The final process model will look like<br>
+x_(t+1) = F * x_(t) + ProcessNoise , For constant velocity model like above the process model will look something like shown below. As its shown from the output of the dot product, we get what we expected</p>
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sympy <span class="im">import</span> symbols , Matrix</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>u,v,s,r,u_dot,v_dot,s_dot <span class="op">=</span> symbols(<span class="st">'u,v,s,r,u_dot,v_dot,s_dot'</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>F  <span class="op">=</span> Matrix([[<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>],  [<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>]])</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>x_ <span class="op">=</span> Matrix([u,v,s,r,u_dot,v_dot,s_dot])</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> F.dot(x_)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>F</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="22">
+<p><span class="math inline">\(\displaystyle \left[\begin{matrix}1 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0\\0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0\\0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 1\\0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1\end{matrix}\right]\)</span></p>
+</div>
+</div>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>out</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="24">
+<pre><code>[u + u_dot, v + v_dot, s + s_dot, r, u_dot, v_dot, s_dot]</code></pre>
+</div>
+</div>
+</section>
+<section id="measurement-model" class="level4">
+<h4 class="anchored" data-anchor-id="measurement-model">Measurement Model</h4>
+<p>We use the variables u,v,s and r as measurements. We get these from the bounding box coordinates of each detections. So we need the measurement model to convert form the state space to the measurement space and the model is very simple 4x7 matrix with</p>
+<div class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> Matrix([[<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>],[<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>]])</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>H</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="29">
+<p><span class="math inline">\(\displaystyle \left[\begin{matrix}1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0\end{matrix}\right]\)</span></p>
+</div>
+</div>
+<div class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> H.dot(x_)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>out</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="30">
+<pre><code>[u, v, s, r]</code></pre>
+</div>
+</div>
+<p>So thats about the kalman filter motion and measurement model and regarding the process noise since we are not observing velocties they are given high variances in the process matrix</p>
+</section>
+</section>
+</section>
+<section id="core-sort-loop" class="level2">
+<h2 class="anchored" data-anchor-id="core-sort-loop">Core Sort Loop</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">#create instance of the SORT tracker , the min_hits are the minimum times the object needed to be redetected to be considered as a valid object</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># max_age is the maximum age above which the object is ignored</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    mot_tracker <span class="op">=</span> Sort(max_age<span class="op">=</span>args.max_age, </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                       min_hits<span class="op">=</span>args.min_hits,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                       iou_threshold<span class="op">=</span>args.iou_threshold) </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      <span class="co"># we loop through each frame</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> frame <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">int</span>(seq_dets[:,<span class="dv">0</span>].<span class="bu">max</span>())):</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        frame <span class="op">+=</span> <span class="dv">1</span> <span class="co">#detection and frame numbers begin at 1</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        dets <span class="op">=</span> seq_dets[seq_dets[:, <span class="dv">0</span>]<span class="op">==</span>frame, <span class="dv">2</span>:<span class="dv">7</span>]</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        dets[:, <span class="dv">2</span>:<span class="dv">4</span>] <span class="op">+=</span> dets[:, <span class="dv">0</span>:<span class="dv">2</span>] <span class="co">#convert to [x1,y1,w,h] to [x1,y1,x2,y2]</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        total_frames <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># this part is only needed if we are displaying</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(display):</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>          fn <span class="op">=</span> os.path.join(<span class="st">'mot_benchmark'</span>, phase, seq, <span class="st">'img1'</span>, <span class="st">'</span><span class="sc">%06d</span><span class="st">.jpg'</span><span class="op">%</span>(frame))</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>          im <span class="op">=</span>io.imread(fn)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>          ax1.imshow(im)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>          plt.title(seq <span class="op">+</span> <span class="st">' Tracked Targets'</span>)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        start_time <span class="op">=</span> time.time()</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">#The the tracker update, the kalman predict and update are done within this update method.</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        trackers <span class="op">=</span> mot_tracker.update(dets)</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>        cycle_time <span class="op">=</span> time.time() <span class="op">-</span> start_time</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>        total_time <span class="op">+=</span> cycle_time</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Here we initially create an instance of the tracker and then loop through each frame and get the detections in those frames ,those detections are passed to the update method of the SORT. One point to note here is that within this update method the actual predict and update of the kalman is called.</p>
+<section id="update-sort" class="level3">
+<h3 class="anchored" data-anchor-id="update-sort">Update Sort</h3>
+<ol type="1">
+<li>For each unmatched detections an new kalmanfitler will be created,and in the very first loop all the kalman tracks will be created from the detections since we are not having any trackers to match against, but from the next frame onwards these trackers will be used to match against them. When a new kalman filter object is created for an unmatched detection the kalmans state vector (the first four states which we get from measurement) is with the intial measurement itself.</li>
+<li>If already initialized trackers are there the predict method for each of the existing trackers is called which is explained in detail below.</li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> t, trk <span class="kw">in</span> <span class="bu">enumerate</span>(trks):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>      pos <span class="op">=</span> <span class="va">self</span>.trackers[t].predict()[<span class="dv">0</span>]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>      trk[:] <span class="op">=</span> [pos[<span class="dv">0</span>], pos[<span class="dv">1</span>], pos[<span class="dv">2</span>], pos[<span class="dv">3</span>], <span class="dv">0</span>]</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> np.<span class="bu">any</span>(np.isnan(pos)):</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        to_del.append(t)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<blockquote class="blockquote">
+<p><em>predict method of Sort</em> ```python</p>
+</blockquote>
+<pre><code>def predict(self):
+"""
+Advances the state vector and returns the predicted bounding box estimate.
+"""
+if((self.kf.x[6]+self.kf.x[2])&lt;=0):
+  self.kf.x[6] *= 0.0
+self.kf.predict()
+self.age += 1
+if(self.time_since_update&gt;0):
+  self.hit_streak = 0
+self.time_since_update += 1
+self.history.append(convert_x_to_bbox(self.kf.x))
+return self.history[-1]
+  </code></pre>
+<pre><code>
+
+&gt;  a.Initially we check for negative area and if so we set the rate of change of area as zero  
+&gt;  b.Then we do the kalman predict method which is F@x_state, and here the covariance also gets udpated.  
+&gt;  c.Then we increase the age of the tracker by one and check for time since the last update was called, if it was called in the last cycle we set the hit_streak to 0.   
+&gt;  d.Increase the time_since_update by 1. We set this back to zero in the update method of the kalman, this is means to know the if we had a valid kalman update for this tracker or not.  
+&gt;  e.We return the converted bounding box from measurement space x_center,y_center,scale,aspect ratio to x_top,y_top,x_bottom,y_bottom.
+
+
+3. Now we associate the predicted trackers to detections.  
+  &gt; *Associate predicted tracks to detections in the current frame*  
+  ```python
+      def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3): 
+      """
+      Assigns detections to tracked object (both represented as bounding boxes)
+
+      Returns 3 lists of matches, unmatched_detections and unmatched_trackers
+      """
+      # if the trackers is empty(happens in the begining of the cycle), we return all detections as unmatched
+      if(len(trackers)==0):
+          return np.empty((0,2),dtype=int), np.arange(len(detections)), np.empty((0,5),dtype=int)
+
+      #here we find the iou between the detections and tracker
+      iou_matrix = iou_batch(detections, trackers)
+      
+      #the iou_matrix will be a one with shape detection_number x tracker_number
+      if min(iou_matrix.shape) &gt; 0:
+          a = (iou_matrix &gt; iou_threshold).astype(np.int32)
+      
+          #if all detection is only associated with only one tracker we can simply return where
+          if a.sum(1).max() == 1 and a.sum(0).max() == 1:
+              matched_indices = np.stack(np.where(a), axis=1)
+          else:
+              #if more than one traker is associated with any detection we use the hungarian algo and find the indexes
+              matched_indices = linear_assignment(-iou_matrix)
+      else:
+          matched_indices = np.empty(shape=(0,2))
+
+      unmatched_detections = []
+      #here we loop through the detections and see if there any unmatched detections
+      for d, det in enumerate(detections):
+          if(d not in matched_indices[:,0]):
+              unmatched_detections.append(d)
+      unmatched_trackers = []
+      
+       #here we loop through the trackers  and see if there any unmatched detections
+      for t, trk in enumerate(trackers):
+          if(t not in matched_indices[:,1]):
+              unmatched_trackers.append(t)
+
+      #filter out matched with low IOU
+      matches = []
+      for m in matched_indices:
+          if(iou_matrix[m[0], m[1]]&lt;iou_threshold):
+              unmatched_detections.append(m[0])
+              unmatched_trackers.append(m[1])
+      else:
+          matches.append(m.reshape(1,2))
+      if(len(matches)==0):
+          matches = np.empty((0,2),dtype=int)
+      else:
+          matches = np.concatenate(matches,axis=0)
+
+      return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
+  ```
+  &gt; a. We first find the iou_matrix , this will have detections along the row and trackers along the column  
+  &gt; b.Now if every row and column of the iou matrix only have one value above the iou_threshold then that row,col pair will be the match with with row for      detection id and col for tracked id.
+  &gt; c.But if more than one mathces are there in every column then we do the linear_assignment using the hungarian alogrithm
+  &gt; d.Then we check for the unmatched detection by seeing if there are any rows in the iou matches without the detection.
+  &gt; e.Similarly we look for the unmatched tracks and see if there any column in the iou matches that are not there.
+  &gt; f.Then we check for the iou_threshold and see and add to mathces and non matches accordingly , then finally return the matches((det,tracker) as (row,col)), unmatched_detection,unmatched_trackers
+
+
+
+4. Now update each of the tracker with the corresponding matched detections , the update method is explained in detail below.
+  &gt; *update*
+  ```python
+     def update(self,bbox):
+          """
+          Updates the state vector with observed bbox.
+          """
+          self.time_since_update = 0
+          self.history = []
+          self.hits += 1
+          self.hit_streak += 1
+          self.kf.update(convert_bbox_to_z(bbox))
+
+  ```
+  &gt; a.Initially we set the time since update to zero.    
+  &gt; b.Then we set the history as an empty list  
+  &gt; c.Then we increase the hits by 1  
+  &gt; d. Then we call the kalman update but first have the change the bounding box form x_top,y_top,x_bottom,y_bottom to the x_center,y_center,scale,aspectRation   
+  
+
+5. Now we reverse the trackers and  get the state, then we check if time_since_update is &lt; 1 , we set it to zero in the update part so here we are checking whether we have done update and only if we have done an update we append it to the output, also we check if the hit_streak(which also increase by one in the update method) is greater than the minimum hit streak unless its the begining frames.
+```python
+  i = len(self.trackers)
+  for trk in reversed(self.trackers):
+      d = trk.get_state()[0]
+      if (trk.time_since_update &lt; 1) and (trk.hit_streak &gt;= self.min_hits or self.frame_count &lt;= self.min_hits):
+           ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
+      i -= 1
+      # remove dead tracklet
+      if(trk.time_since_update &gt; self.max_age):
+            self.trackers.pop(i)
+  if(len(ret)&gt;0):
+        return np.concatenate(ret)
+  return np.empty((0,5))</code></pre>
+<ol start="6" type="1">
+<li>We remove the dead trackers, meaning trackers that have not been assigned to any detections, by checking the time_since_update, the time_since_update is set to zero in the udpate method and is incremented in the predict method, so if we are only doing prediction without any update the time_since_update will increase and pass the maximum age and we will pop it from the trackers</li>
+<li>Finally we concatenate the detections and give them as out.</li>
+<li>Like this we keep updating looping through each frame and detection in it and the same detections should ideally have the same id until they disappear from the frame.</li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
