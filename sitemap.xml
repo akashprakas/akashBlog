@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/about.html</loc>
+    <lastmod>2022-11-24T18:43:06.318Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/index.html</loc>
+    <lastmod>2022-11-24T18:43:06.904Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2020-09-20-pytorch_iou.html</loc>
+    <lastmod>2022-11-24T18:43:07.459Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2020-12-19-hacking_fasterrcnn.html</loc>
+    <lastmod>2022-11-24T18:43:08.062Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-07-30-so what does mobile blocks save.html</loc>
+    <lastmod>2022-11-24T18:43:08.562Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-08-24-understanding the losses in centernet architecture.html</loc>
+    <lastmod>2022-11-24T18:43:09.206Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-11-23-simpleonlinerealtimetracking.html</loc>
+    <lastmod>2022-11-24T18:43:09.691Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/post-with-code/index.html</loc>
+    <lastmod>2022-11-24T18:43:10.068Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/welcome/index.html</loc>
+    <lastmod>2022-11-24T18:43:10.475Z</lastmod>
+  </url>
+</urlset>
