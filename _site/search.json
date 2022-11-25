@@ -60,7 +60,7 @@
     "href": "posts/2022-11-23-simpleonlinerealtimetracking.html",
     "title": "Simple Online RealTime Tracking",
     "section": "",
-    "text": "This is an overview of the implementation details of SORT tracking algorithh. The official implemenation of the paper is present this repo . The paper pretty much explains its straightforward , i will be more walking through the implemenation details. In a top level SORT is a tracking algorithm which falls in the class of tracking by detection and the detection, assoaciation , tracking cycle is happening in the 2D image domain."
+    "text": "This is an overview of the implementation details of SORT tracking algorithm. The official implemenation of the paper is present in this repo . The paper pretty much explains it straightforward , i will be more walking through the implemenation details. In a top level SORT is a tracking algorithm which falls in the class of tracking by detection and the detection, assoaciation , tracking cycle is happening in the 2D image domain."
   },
   {
     "objectID": "posts/2022-11-23-simpleonlinerealtimetracking.html#detection",
