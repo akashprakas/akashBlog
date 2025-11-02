@@ -20,7 +20,7 @@ code[class*="language-"] {
     /* Improve monospace appearance and contrast for readability */
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
     font-size: 0.95rem;
-    background-color: var(--code-bg, #0f1724);
+    background-color: var(--code-bg, #daf1b4);
     color: var(--code-fg, #e6eef6);
     border-radius: 6px;
 }
@@ -30,7 +30,7 @@ code {
     white-space: pre-wrap;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
     font-size: 0.95rem;
-    background-color: var(--code-bg, #0f1724);
+    background-color: var(--code-bg, #daf1b4);
     color: var(--code-fg, #e6eef6);
     border-radius: 6px;
     padding: 0.15rem 0.35rem;
