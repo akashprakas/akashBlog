@@ -1,31 +1,85 @@
+/* filepath: /workspaces/akashBlog/styles.css */
 /* css styles */
+
 /* Make code blocks use the full available width and allow horizontal scrolling */
 pre,
 pre[class*="language-"],
-code[class*="language-"],
 .highlight pre,
 .gatsby-highlight pre,
-.markdown pre {
+.markdown pre,
+code[class*="language-"] {
     box-sizing: border-box;
     width: 100% !important;
     max-width: 100% !important;
     padding: 1rem;
     overflow: auto;        /* allow scrolling when content exceeds width */
-    white-space: pre;      /* preserve formatting */
+    white-space: pre;      /* preserve formatting for code blocks */
     word-break: normal;
     line-height: 1.45;
-}
 
-/* Keep inline code wrapped and not forcing layout overflow */
-code {
-    white-space: pre-wrap;
-}
-
-/* Improve monospace appearance and contrast for readability */
-pre, code {
+    /* Improve monospace appearance and contrast for readability */
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
     font-size: 0.95rem;
     background-color: var(--code-bg, #0f1724);
     color: var(--code-fg, #e6eef6);
     border-radius: 6px;
 }
+
+/* Keep inline code wrapped and not forcing layout overflow */
+code {
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+    font-size: 0.95rem;
+    background-color: var(--code-bg, #0f1724);
+    color: var(--code-fg, #e6eef6);
+    border-radius: 6px;
+    padding: 0.15rem 0.35rem;
+}
+
+/* ---------- Added rules: widen page & code-cell containers for Quarto output ---------- */
+
+/* make the page/content full browser width so code cells can expand */
+.quarto-page,
+.quarto-body,
+.page,
+.container,
+.content,
+main {
+    max-width: 100% !important;
+    width: calc(100vw - 32px) !important; /* small page padding */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* force code-cell input areas and source blocks to use available width */
+.cell.code_cell .input_area,
+div.cell .source,
+div.source,
+div.code,
+.quarto .cell-source,
+.quarto .source,
+div.quarto-body pre,
+div.quarto-body .source pre,
+.rendered_html .cell-source,
+.rendered_html pre {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+}
+
+/* OPTIONAL: enable wrapping instead of horizontal scroll (uncomment to use) */
+/*
+pre,
+pre[class*="language-"],
+.highlight pre,
+.gatsby-highlight pre,
+.markdown pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere;
+}
+*/
