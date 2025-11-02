@@ -216,12 +216,10 @@ window.Quarto = {
   <li><a href="#why-was-deformable-detr-needed" id="toc-why-was-deformable-detr-needed" class="nav-link" data-scroll-target="#why-was-deformable-detr-needed">Why was Deformable DETR needed?</a></li>
   <li><a href="#convolutional-backbone" id="toc-convolutional-backbone" class="nav-link" data-scroll-target="#convolutional-backbone">Convolutional backbone</a></li>
   <li><a href="#encoder" id="toc-encoder" class="nav-link" data-scroll-target="#encoder">Encoder</a></li>
-  <li><a href="#decoder" id="toc-decoder" class="nav-link" data-scroll-target="#decoder">Decoder</a>
-  <ul class="collapse">
+  <li><a href="#decoder" id="toc-decoder" class="nav-link" data-scroll-target="#decoder">Decoder</a></li>
   <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
   <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
   <li><a href="#credits" id="toc-credits" class="nav-link" data-scroll-target="#credits">Credits</a></li>
-  </ul></li>
   </ul>
 </nav>
     </div>
@@ -243,72 +241,79 @@ window.Quarto = {
 <pre><code>torch version 2.9.0+cpu</code></pre>
 </div>
 </div>
-<section id="overview" class="level3">
-<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>This blog provides a code-level walkthrough of the internals of Deformable DETR and its core component—deformable attention—to understand how it works in practice. I’ll explore the full pipeline: starting from how a batch of images flows through the convolutional backbone, then into the encoder, and finally how deformable attention operates within the architecture both in encoder side and decoder cross attention. Along the way, I’ll highlight where Deformable DETR aligns with the original DETR and where it diverges. All examples shown below are executable in the accompanying notebook and have been tested to work end-to-end.</p>
 <section id="prerequisites" class="level5">
 <h5 class="anchored" data-anchor-id="prerequisites">Prerequisites</h5>
 <p>I assume the reader have good understanding of <a href="https://arxiv.org/abs/2005.12872">DETR</a></p>
 </section>
 </section>
-<section id="why-was-deformable-detr-needed" class="level3">
-<h3 class="anchored" data-anchor-id="why-was-deformable-detr-needed">Why was Deformable DETR needed?</h3>
+<section id="why-was-deformable-detr-needed" class="level2">
+<h2 class="anchored" data-anchor-id="why-was-deformable-detr-needed">Why was Deformable DETR needed?</h2>
 <p><a href="https://arxiv.org/abs/2010.04159">Deformable DETR</a> is an enhancement of DETR, which was one of the first approaches to apply transformers to object detection. While DETR introduced a novel paradigm, it faced two major challenges</p>
 <pre><code>1. Difficulty Detecting Small Objects</code></pre>
 <p>Most modern object detection networks leverage Feature Pyramid Networks (FPN) to handle objects at multiple scales. However, DETR cannot easily incorporate FPN because its global self-attention operates over the entire feature map, making multi-scale attention computationally expensive. Deformable DETR addresses this by introducing multi-scale deformable attention, which selectively attends to a small set of key points across different feature levels instead of the entire map. This enables efficient multi-scale feature aggregation without exploding computational cost.</p>
 <pre><code>2. Long Training Time</code></pre>
 <p>DETR requires extensive training because the model must learn which parts of the feature map to attend to from scratch, which is slow to converge. Deformable DETR solves this by using a Deformable Attention Module, which focuses on a sparse set of relevant keys rather than all possible keys. This reduces complexity and accelerates convergence significantly.</p>
 </section>
-<section id="convolutional-backbone" class="level3">
-<h3 class="anchored" data-anchor-id="convolutional-backbone">Convolutional backbone</h3>
+<section id="convolutional-backbone" class="level2">
+<h2 class="anchored" data-anchor-id="convolutional-backbone">Convolutional backbone</h2>
 <p><img src="images/deformDetrBackbone.png" class="img-fluid"></p>
-<div id="fbe6b1b4" class="cell" data-execution_count="25">
+<div id="fbe6b1b4" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pixel_values <span class="op">=</span> torch.randn(<span class="dv">4</span>,<span class="dv">3</span>,<span class="dv">1065</span>,<span class="dv">1066</span>) </span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1 .Initially we need to pass the images through the FPN and get features across different layers,</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Also we need to get positional embedding for each of the feature map, the positional embedding is similar to the normal sine-cosine positional embedding in the original paper,</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  the only difference here is that since we have HxW in the feature domain , suppose if our embedding dim is 256,</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#  we will have them alingned in such a way that the first 128 corresponds to vertical and the next 128 corresponds</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># to vertical so that in the end we end up with 256 and that encodes both vertical and horizontal positions. https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Suppose we get feature map from 4 layers and let them be (4,512,134,134) ,(4,1024,67,67) , (4,2048,34,34) ,(4,2048,17,17) </span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># [Note the actual feature map in the paper is created by an additional conv+group norm] and there positional embeddings w</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># will have the same size as well. but with the corresponding embedding dim, so they will be of size (4,256,134,134) ,(4,256,67,67) ,(4,256,34,34) ,(4,256,17,17)</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>feature_shapes <span class="op">=</span> [</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">512</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">1024</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Also we need to get positional embedding for each of the feature map, the positional embedding</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  is similar to the normal sine-cosine positional embedding in the original paper,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#  the only difference here is that since we have HxW in the feature domain , </span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># suppose if our embedding dim is 256,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#  we will have them alingned in such a way that the first 128 corresponds</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">#  to vertical and the next 128 corresponds</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># to vertical so that in the end we end up with 256 and that encodes both vertical </span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># and horizontal positions. https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Suppose we get feature map from 4 layers and let </span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># them be (4,512,134,134) ,(4,1024,67,67) , (4,2048,34,34) ,(4,2048,17,17) </span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># [Note the actual feature map in the paper is created by </span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># an additional conv+group norm] and there positional embeddings w</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co"># will have the same size as well. but with the corresponding embedding dim, </span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co"># so they will be of size (4,256,134,134) ,(4,256,67,67) ,(4,256,34,34) ,(4,256,17,17)</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Positional embedding shapes (same spatial dims, but channel dim = 256)</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>embedding_shapes <span class="op">=</span> [</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co"># original implementation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/backbone.py#L71</span></span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>feature_maps <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> feature_shapes]</span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co"># original implemenation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>positional_embeddings <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> embedding_shapes]</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 4 . Now we have to have a 1x1 conv layer to reduce the channel dimension of the feature so that they match the embedding dimension of 256</span></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>conv_layers <span class="op">=</span> nn.ModuleList([</span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">512</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">1024</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the 1x1 conv layers</span></span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>reduced_feature_maps <span class="op">=</span> [conv(feature) <span class="cf">for</span> conv, feature <span class="kw">in</span> <span class="bu">zip</span>(conv_layers, feature_maps)]</span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (fmap,pos_emb) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(reduced_feature_maps,positional_embeddings)):</span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Reduced feature map </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss"> shape:"</span>, fmap.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>feature_shapes <span class="op">=</span> [</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">512</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">1024</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Positional embedding shapes (same spatial dims, but channel dim = 256)</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>embedding_shapes <span class="op">=</span> [</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co"># original implementation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/backbone.py#L71</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>feature_maps <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> feature_shapes]</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co"># original implemenation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>positional_embeddings <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> embedding_shapes]</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="co"># 4 . Now we have to have a 1x1 conv layer to reduce the channel dimension of the feature so that they match the embedding dimension of 256</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>conv_layers <span class="op">=</span> nn.ModuleList([</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">512</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">1024</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the 1x1 conv layers</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>reduced_feature_maps <span class="op">=</span> [conv(feature) <span class="cf">for</span> conv, feature <span class="kw">in</span> <span class="bu">zip</span>(conv_layers, feature_maps)]</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (fmap,pos_emb) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(reduced_feature_maps,positional_embeddings)):</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Reduced feature map </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss"> shape:"</span>, fmap.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reduced feature map 1 shape: torch.Size([4, 256, 134, 134])
 Reduced feature map 2 shape: torch.Size([4, 256, 67, 67])
@@ -674,7 +679,7 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
  torch.Size([4, 23890, 256]))</code></pre>
 </div>
 </div>
-<div id="6a7a3ff1" class="cell" data-execution_count="43">
+<div id="6a7a3ff1" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">## DEFORMABLE MULTI SCALE </span><span class="al">ATTENTION</span><span class="co">.</span></span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>num_heads <span class="op">=</span> <span class="dv">8</span></span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>num_levels  <span class="op">=</span> <span class="dv">4</span></span>
@@ -709,17 +714,18 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <span id="cb40-32"><a href="#cb40-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb40-33"><a href="#cb40-33" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights_layer(hidden_states)</span>
 <span id="cb40-34"><a href="#cb40-34" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.view(batch_size,num_queries,num_heads,num_levels<span class="op">*</span>n_points)</span>
-<span id="cb40-35"><a href="#cb40-35" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> torch.nn.functional.softmax(attention_weights, <span class="op">-</span><span class="dv">1</span>).view(batch_size,num_queries,num_heads,num_levels,n_points) <span class="co"># note here the softmax is along a row of size 16 ,intuitively this means there 4 points from 4 feature levels</span></span>
-<span id="cb40-36"><a href="#cb40-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sampling offset shape = </span><span class="sc">{</span>sampling_offsets<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb40-37"><a href="#cb40-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Attention weights shape = </span><span class="sc">{</span>attention_weights<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
-<span id="cb40-38"><a href="#cb40-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-35"><a href="#cb40-35" aria-hidden="true" tabindex="-1"></a><span class="co"># note here the softmax is along a row of size 16 ,intuitively this means there 4 points from 4 feature levels</span></span>
+<span id="cb40-36"><a href="#cb40-36" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> torch.nn.functional.softmax(attention_weights, <span class="op">-</span><span class="dv">1</span>).view(batch_size,num_queries,num_heads,num_levels,n_points) </span>
+<span id="cb40-37"><a href="#cb40-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sampling offset shape = </span><span class="sc">{</span>sampling_offsets<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb40-38"><a href="#cb40-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Attention weights shape = </span><span class="sc">{</span>attention_weights<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
 <span id="cb40-39"><a href="#cb40-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-40"><a href="#cb40-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we have to modify the refrence points with these sampling points, what this means is that for each of the reference points , we need to look into 4 more points across 8 different heads</span></span>
-<span id="cb40-41"><a href="#cb40-41" aria-hidden="true" tabindex="-1"></a><span class="co"># so initially we had for each query 1 points account each feature dimension making it total 4 and now when we add this sampling offsets it makes 4 more across 8 differenet heads</span></span>
-<span id="cb40-42"><a href="#cb40-42" aria-hidden="true" tabindex="-1"></a>reference_points_input <span class="op">=</span> reference_points_input[:,:,<span class="va">None</span>,:,<span class="va">None</span>,:]</span>
-<span id="cb40-43"><a href="#cb40-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Reference points with unsqueezed dimension for head and levels = </span><span class="sc">{</span>reference_points_input<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb40-44"><a href="#cb40-44" aria-hidden="true" tabindex="-1"></a>sampling_location <span class="op">=</span> reference_points_input <span class="op">+</span> sampling_offsets</span>
-<span id="cb40-45"><a href="#cb40-45" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final sampling locations = </span><span class="sc">{</span>sampling_location<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb40-40"><a href="#cb40-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-41"><a href="#cb40-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we have to modify the refrence points with these sampling points, what this means is that for each of the reference points , we need to look into 4 more points across 8 different heads</span></span>
+<span id="cb40-42"><a href="#cb40-42" aria-hidden="true" tabindex="-1"></a><span class="co"># so initially we had for each query 1 points account each feature dimension making it total 4 and now when we add this sampling offsets it makes 4 more across 8 differenet heads</span></span>
+<span id="cb40-43"><a href="#cb40-43" aria-hidden="true" tabindex="-1"></a>reference_points_input <span class="op">=</span> reference_points_input[:,:,<span class="va">None</span>,:,<span class="va">None</span>,:]</span>
+<span id="cb40-44"><a href="#cb40-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Reference points with unsqueezed dimension for head and levels = </span><span class="sc">{</span>reference_points_input<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb40-45"><a href="#cb40-45" aria-hidden="true" tabindex="-1"></a>sampling_location <span class="op">=</span> reference_points_input <span class="op">+</span> sampling_offsets</span>
+<span id="cb40-46"><a href="#cb40-46" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final sampling locations = </span><span class="sc">{</span>sampling_location<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Value shape = torch.Size([4, 23890, 8, 32])
 Offset Normalizer torch.Size([1, 1, 1, 4, 1, 2])
@@ -857,37 +863,40 @@ Final output after summation torch.Size([32, 32, 300])
 </div>
 </div>
 </section>
-<section id="final-box-and-class-prediction" class="level3">
-<h3 class="anchored" data-anchor-id="final-box-and-class-prediction">Final Box and class prediction</h3>
-<div id="743cd6ed" class="cell" data-execution_count="52">
+</section>
+<section id="final-box-and-class-prediction" class="level2">
+<h2 class="anchored" data-anchor-id="final-box-and-class-prediction">Final Box and class prediction</h2>
+<div id="743cd6ed" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,which is  the same space as the predicted offset.</span></span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
-<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(encoder_output)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to </span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a><span class="co"># unconstrained space,which is  the same space as the predicted offset.</span></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(encoder_output)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="2a9e8cfa" class="cell" data-execution_count="53">
+<div id="2a9e8cfa" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,which is  the same space as the predicted offset.</span></span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
-<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(reference_points)</span>
-<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a><span class="co"># say we have 10 classes</span></span>
-<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>num_class <span class="op">=</span> <span class="dv">10</span> </span>
-<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>class_pred <span class="op">=</span> nn.Linear(embdedding_dim,num_class)</span>
-<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>box_head  <span class="op">=</span> nn.Sequential(</span>
-<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>    nn.Linear(embdedding_dim, <span class="dv">512</span>),</span>
-<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>    nn.ReLU(inplace<span class="op">=</span><span class="va">True</span>),</span>
-<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>    nn.Linear(<span class="dv">512</span>, <span class="dv">4</span>),</span>
-<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a>output_classes <span class="op">=</span> class_pred(encoder_output)</span>
-<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a>box_pred <span class="op">=</span> box_head(encoder_output)</span>
-<span id="cb58-18"><a href="#cb58-18" aria-hidden="true" tabindex="-1"></a>box_pred[...,:<span class="dv">2</span>] <span class="op">+=</span> reference_points_with_inverse_sigmoid</span>
-<span id="cb58-19"><a href="#cb58-19" aria-hidden="true" tabindex="-1"></a>pred_boxes <span class="op">=</span> box_pred.sigmoid()</span>
-<span id="cb58-20"><a href="#cb58-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final box head shape </span><span class="sc">{</span>output_classes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb58-21"><a href="#cb58-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final pred boxes head shape </span><span class="sc">{</span>pred_boxes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> "</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="co"># which is  the same space as the predicted offset.</span></span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(reference_points)</span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a><span class="co"># say we have 10 classes</span></span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>num_class <span class="op">=</span> <span class="dv">10</span> </span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>class_pred <span class="op">=</span> nn.Linear(embdedding_dim,num_class)</span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>box_head  <span class="op">=</span> nn.Sequential(</span>
+<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>    nn.Linear(embdedding_dim, <span class="dv">512</span>),</span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>    nn.ReLU(inplace<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>    nn.Linear(<span class="dv">512</span>, <span class="dv">4</span>),</span>
+<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a>output_classes <span class="op">=</span> class_pred(encoder_output)</span>
+<span id="cb58-18"><a href="#cb58-18" aria-hidden="true" tabindex="-1"></a>box_pred <span class="op">=</span> box_head(encoder_output)</span>
+<span id="cb58-19"><a href="#cb58-19" aria-hidden="true" tabindex="-1"></a>box_pred[...,:<span class="dv">2</span>] <span class="op">+=</span> reference_points_with_inverse_sigmoid</span>
+<span id="cb58-20"><a href="#cb58-20" aria-hidden="true" tabindex="-1"></a>pred_boxes <span class="op">=</span> box_pred.sigmoid()</span>
+<span id="cb58-21"><a href="#cb58-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final box head shape </span><span class="sc">{</span>output_classes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb58-22"><a href="#cb58-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final pred boxes head shape </span><span class="sc">{</span>pred_boxes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> "</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Final box head shape torch.Size([4, 300, 10])
 Final pred boxes head shape torch.Size([4, 300, 4]) </code></pre>
@@ -898,8 +907,8 @@ Final pred boxes head shape torch.Size([4, 300, 4]) </code></pre>
 <span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a><span class="co"># it uses the same loss like DETR where the losses are a combination of l1 loss and Generalized IOU loss</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="deformable-attention-compute-and-memory-complexity" class="level3">
-<h3 class="anchored" data-anchor-id="deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</h3>
+<section id="deformable-attention-compute-and-memory-complexity" class="level2">
+<h2 class="anchored" data-anchor-id="deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</h2>
 <p>The paper have a good summary of the complexity of the computation here I will show it bit in detail, specializing to the <strong>encoder</strong> and <strong>decoder</strong> settings, and show how <span class="math inline">\(L\)</span> (levels) and <span class="math inline">\(K\)</span> (points per level) enter the formulas.</p>
 <section id="notation" class="level4">
 <h4 class="anchored" data-anchor-id="notation">Notation</h4>
@@ -1133,8 +1142,8 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 </ul>
 </section>
 </section>
-<section id="credits" class="level3">
-<h3 class="anchored" data-anchor-id="credits">Credits</h3>
+<section id="credits" class="level2">
+<h2 class="anchored" data-anchor-id="credits">Credits</h2>
 <p>Most of the implementation closely follow the below two, so all credtits to them!!</p>
 <ul>
 <li><a href="https://github.com/fundamentalvision/Deformable-DETR">Original Detr Paper Implementation</a></li>
@@ -1142,7 +1151,6 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 </ul>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
