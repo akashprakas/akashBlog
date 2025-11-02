@@ -1,3 +1,4 @@
 /.quarto/
 posts/.ipynb_checkpoints/
 .vscode/
+**/*.quarto_ipynb
