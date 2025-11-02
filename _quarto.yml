@@ -12,8 +12,12 @@ website:
         href: https://twitter.com/akashaapz
 format:
   html:
-    theme: cosmo
-    css: styles.css
+    toc: true
+    toc-location: right
+    grid:
+      body-width: 1200px      # <- widen the main content column
+      margin-width: 200px     # <- width of the right margin (TOC column)
+      gutter-width: 1.5rem    # <- spacing between columns
 
 
 
