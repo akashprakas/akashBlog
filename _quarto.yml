@@ -2,7 +2,8 @@ project:
   type: website
 
 website:
-  title: "akashBlog"
+  title: "Akash’s Blog"
+  site-url: https://akashprakas.github.io/akashBlog/
   navbar:
     right:
       - about.qmd
@@ -10,14 +11,26 @@ website:
         href: https://github.com/akashprakas
       - icon: twitter
         href: https://twitter.com/akashaapz
+
 format:
   html:
+    theme:
+      light: flatly
+      dark: darkly
+    fontsize: 1.05em
+    linestretch: 1.65
+    css: styles.css
     toc: true
     toc-location: right
+    anchor-sections: true
+    code-copy: true
+    code-overflow: wrap
+    code-line-numbers: false
+    highlight-style: atom-one
     grid:
-      body-width: 1200px      # <- widen the main content column
-      margin-width: 200px     # <- width of the right margin (TOC column)
-      gutter-width: 1.5rem    # <- spacing between columns
+      body-width: 1200px
+      margin-width: 300px
+      gutter-width: 1.5rem
 
 
 
