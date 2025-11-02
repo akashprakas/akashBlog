@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-10-31">
+
+<title>Deformable DETR Code WalkThrough – akashBlog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-0b9a2a02bd90fa1c89e1d56d516cd0b1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">akashBlog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/akashprakas"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/akashaapz"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Deformable DETR Code WalkThrough</h1>
+                                <div class="quarto-categories">
+                <div class="quarto-category">jupyter</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">October 31, 2025</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-was-deformable-detr-needed" id="toc-why-was-deformable-detr-needed" class="nav-link active" data-scroll-target="#why-was-deformable-detr-needed">Why was Deformable DETR needed?</a></li>
+  <li><a href="#convolutional-backbone" id="toc-convolutional-backbone" class="nav-link" data-scroll-target="#convolutional-backbone">Convolutional backbone</a></li>
+  <li><a href="#encoder" id="toc-encoder" class="nav-link" data-scroll-target="#encoder">Encoder</a></li>
+  <li><a href="#decoder" id="toc-decoder" class="nav-link" data-scroll-target="#decoder">Decoder</a>
+  <ul class="collapse">
+  <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
+  <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<div id="86a36c34" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.nn <span class="im">as</span> nn</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'torch version </span><span class="sc">{</span>torch<span class="sc">.</span>__version__<span class="sc">}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>torch version 2.9.0+cpu</code></pre>
+</div>
+</div>
+<section id="prerequisites" class="level5">
+<h5 class="anchored" data-anchor-id="prerequisites">Prerequisites</h5>
+<p>I assume the reader have good understanding of <a href="https://arxiv.org/abs/2005.12872">DETR</a></p>
+</section>
+<section id="why-was-deformable-detr-needed" class="level3">
+<h3 class="anchored" data-anchor-id="why-was-deformable-detr-needed">Why was Deformable DETR needed?</h3>
+<p><a href="https://arxiv.org/abs/2010.04159">Deformable DETR</a> is an enhancement of DETR, which was one of the first approaches to apply transformers to object detection. While DETR introduced a novel paradigm, it faced two major challenges</p>
+<pre><code>1. Difficulty Detecting Small Objects</code></pre>
+<p>Most modern object detection networks leverage Feature Pyramid Networks (FPN) to handle objects at multiple scales. However, DETR cannot easily incorporate FPN because its global self-attention operates over the entire feature map, making multi-scale attention computationally expensive. Deformable DETR addresses this by introducing multi-scale deformable attention, which selectively attends to a small set of key points across different feature levels instead of the entire map. This enables efficient multi-scale feature aggregation without exploding computational cost.</p>
+<pre><code>2. Long Training Time</code></pre>
+<p>DETR requires extensive training because the model must learn which parts of the feature map to attend to from scratch, which is slow to converge. Deformable DETR solves this by using a Deformable Attention Module, which focuses on a sparse set of relevant keys rather than all possible keys. This reduces complexity and accelerates convergence significantly.</p>
+</section>
+<section id="convolutional-backbone" class="level3">
+<h3 class="anchored" data-anchor-id="convolutional-backbone">Convolutional backbone</h3>
+<div id="fbe6b1b4" class="cell" data-execution_count="124">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pixel_values <span class="op">=</span> torch.randn(<span class="dv">4</span>,<span class="dv">3</span>,<span class="dv">1065</span>,<span class="dv">1066</span>) </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1 .Initially we need to pass the images through the FPN and get features across different layers,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Also we need to get positional embedding for each of the feature map, the positional embedding is similar to the normal sine-cosine positional embedding in the original paper,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  the only difference here is that since we have HxW in the feature domain , suppose if our embedding dim is 256, we will have them alingned in such a way that the first 128 corresponds to vertical and the next 128 corresponds</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># to vertical so that in the end we end up with 256 and that encodes both vertical and horizontal positions. https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Suppose we get feature map from 4 layers and let them be (4,512,134,134) ,(4,1024,67,67) , (4,2048,34,34) ,(4,2048,17,17) [Note the actual feature map in the paper is created by an additional conv+group norm] and there positional embeddings w</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># will have the same size as well. but with the corresponding embedding dim, so they will be of size (4,256,134,134) ,(4,256,67,67) ,(4,256,34,34) ,(4,256,17,17)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>feature_shapes <span class="op">=</span> [</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">512</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">1024</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">2048</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Positional embedding shapes (same spatial dims, but channel dim = 256)</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>embedding_shapes <span class="op">=</span> [</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">134</span>, <span class="dv">134</span>),</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">67</span>, <span class="dv">67</span>),</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">34</span>, <span class="dv">34</span>),</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">4</span>, <span class="dv">256</span>, <span class="dv">17</span>, <span class="dv">17</span>)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co"># original implementation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/backbone.py#L71</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>feature_maps <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> feature_shapes]</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># original implemenation here https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/position_encoding.py#L55</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>positional_embeddings <span class="op">=</span> [torch.randn(shape) <span class="cf">for</span> shape <span class="kw">in</span> embedding_shapes]</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 4 . Now we have to have a 1x1 conv layer to reduce the channel dimension of the feature so that they match the embedding dimension of 256</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>conv_layers <span class="op">=</span> nn.ModuleList([</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">512</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">1024</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    nn.Conv2d(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">256</span>, kernel_size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the 1x1 conv layers</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>reduced_feature_maps <span class="op">=</span> [conv(feature) <span class="cf">for</span> conv, feature <span class="kw">in</span> <span class="bu">zip</span>(conv_layers, feature_maps)]</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (fmap,pos_emb) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(reduced_feature_maps,positional_embeddings)):</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Reduced feature map </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss"> shape:"</span>, fmap.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reduced feature map 1 shape: torch.Size([4, 256, 134, 134])
+Reduced feature map 2 shape: torch.Size([4, 256, 67, 67])
+Reduced feature map 3 shape: torch.Size([4, 256, 34, 34])
+Reduced feature map 4 shape: torch.Size([4, 256, 17, 17])</code></pre>
+</div>
+</div>
+<div id="f8f37015" class="cell" data-execution_count="125">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 5 . Also we need a learnable Level embedding for each levels , since here we are using 4 layers, and 256 embedding dim , the size of the level embedding will be (4,256)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Learnable level embedding (in actual model this would be nn.Parameter)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>level_embedding <span class="op">=</span> torch.randn((<span class="dv">4</span>, <span class="dv">256</span>))  <span class="co"># shape: (num_levels, embedding_dim)</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#6. Now we need to flatten and transpose the features and positional embedding so they become the similar shape like token_len X embedding_dim , for example the first feature map will become (4,134*134,256) ,similarly we have do this </span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># for all the feature maps and the positional embedding. and one additional thing to do is to add the level embedding to the positional embedding.</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>features_flatten <span class="op">=</span> []</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>positional_and_level_embedding_flattened <span class="op">=</span> []</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level, (feature, pos_emb) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(reduced_feature_maps, positional_embeddings)):</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Flatten and transpose: (B, C, H, W) -&gt; (B, HW, C)</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    feature_flatten <span class="op">=</span> feature.flatten(<span class="dv">2</span>).transpose(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    positional_plus_level_embed <span class="op">=</span> pos_emb.flatten(<span class="dv">2</span>).transpose(<span class="dv">1</span>, <span class="dv">2</span>) <span class="op">+</span> level_embedding[level].view(<span class="dv">1</span>, <span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    features_flatten.append(feature_flatten)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    positional_and_level_embedding_flattened.append(positional_plus_level_embed)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Print shapes</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Level </span><span class="sc">{</span>level <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">:"</span>)</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Feature shape: </span><span class="sc">{</span>feature_flatten<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Positional + Level Embedding shape: </span><span class="sc">{</span>positional_plus_level_embed<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Level 1:
+  Feature shape: torch.Size([4, 17956, 256])
+  Positional + Level Embedding shape: torch.Size([4, 17956, 256])
+Level 2:
+  Feature shape: torch.Size([4, 4489, 256])
+  Positional + Level Embedding shape: torch.Size([4, 4489, 256])
+Level 3:
+  Feature shape: torch.Size([4, 1156, 256])
+  Positional + Level Embedding shape: torch.Size([4, 1156, 256])
+Level 4:
+  Feature shape: torch.Size([4, 289, 256])
+  Positional + Level Embedding shape: torch.Size([4, 289, 256])</code></pre>
+</div>
+</div>
+<div id="da3098e3" class="cell" data-execution_count="126">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 7: Concatenate along sequence dimension (dim=1)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> torch.cat(features_flatten, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, 256)</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>position_embeddings <span class="op">=</span> torch.cat(positional_and_level_embedding_flattened, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, 256)</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Concatenated Inputs Embeds shape:"</span>, inputs_embeds.shape)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Concatenated Position Embeddings shape:"</span>, position_embeddings.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Concatenated Inputs Embeds shape: torch.Size([4, 23890, 256])
+Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
+</div>
+</div>
+</section>
+<section id="encoder" class="level2">
+<h2 class="anchored" data-anchor-id="encoder">Encoder</h2>
+<div id="2cf651a8" class="cell" data-execution_count="127">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. we need to apply a initial dropout before passing it to the encoder </span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> nn.functional.dropout(inputs_embeds, p<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>batch_size <span class="op">=</span> inputs_embeds.shape[<span class="dv">0</span>]</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">#9. Generating the reference points, so this is a concept that is similar to the deformable convolution , so basically for each feature_point/query in the feature map we need to look into the corresponding point in the other feature</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># map as well, feature maps a re normilized  based on their height and width, so we can look for the corresponding point for each query in different points as well, here</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">#original implemenation https://github.com/fundamentalvision/Deformable-DETR/blob/11169a60c33333af00a4849f1808023eba96a931/models/deformable_transformer.py#L238 </span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>spatial_shapes_list <span class="op">=</span> [(<span class="dv">134</span>, <span class="dv">134</span>), (<span class="dv">67</span>, <span class="dv">67</span>), (<span class="dv">34</span>, <span class="dv">34</span>), (<span class="dv">17</span>, <span class="dv">17</span>)]</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>reference_points_list <span class="op">=</span> []</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> H_, W_ <span class="kw">in</span> spatial_shapes_list:</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Create meshgrid of normalized coordinates</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        ref_y, ref_x <span class="op">=</span> torch.meshgrid(</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            torch.linspace(<span class="fl">0.5</span>, H_ <span class="op">-</span> <span class="fl">0.5</span>, H_, dtype<span class="op">=</span>torch.float32),</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>            torch.linspace(<span class="fl">0.5</span>, W_ <span class="op">-</span> <span class="fl">0.5</span>, W_, dtype<span class="op">=</span>torch.float32),</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>            indexing<span class="op">=</span><span class="st">'ij'</span>  <span class="co"># Important for correct axis ordering</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Normalize</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        ref_y <span class="op">=</span> ref_y.reshape(<span class="op">-</span><span class="dv">1</span>) <span class="op">/</span> H_</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        ref_x <span class="op">=</span> ref_x.reshape(<span class="op">-</span><span class="dv">1</span>) <span class="op">/</span> W_</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Stack and expand to batch size</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        ref <span class="op">=</span> torch.stack((ref_x, ref_y), dim<span class="op">=-</span><span class="dv">1</span>)  <span class="co"># shape: (H_*W_, 2)</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        ref <span class="op">=</span> ref[<span class="va">None</span>].expand(batch_size, <span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)  <span class="co"># shape: (B, H_*W_, 2)</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        reference_points_list.append(ref)</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Concatenate all levels</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>reference_points <span class="op">=</span> torch.cat(reference_points_list, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, 2)</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Expand to include level dimension</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>reference_points <span class="op">=</span> reference_points[:, :, <span class="va">None</span>, :]  <span class="co"># shape: (B, total_seq_len, 1, 2)</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Repeat across levels</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>num_levels <span class="op">=</span> <span class="bu">len</span>(spatial_shapes_list)</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>reference_points <span class="op">=</span> reference_points.expand(<span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>, num_levels, <span class="op">-</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, L, 2)</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Reference points shape input to encoder "</span>,reference_points.shape)</span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reference points shape input to encoder  torch.Size([4, 23890, 4, 2])</code></pre>
+</div>
+</div>
+<div id="937677b6" class="cell" data-execution_count="128">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#so for now each query we have 4 positions (x,y) across 4 different channels, now this will be passed to the encoder.</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">## DEFORMABLE MULTI SCALE </span><span class="al">ATTENTION</span><span class="co">.</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># params</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>num_heads <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>num_levels  <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>n_points  <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>embdedding_dim <span class="op">=</span> inputs_embeds.shape[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>batch_size, num_queries, _ <span class="op">=</span> inputs_embeds.shape</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>fc1 <span class="op">=</span> nn.Linear(embdedding_dim, <span class="dv">512</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>fc2 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, embdedding_dim)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>layer_norm1 <span class="op">=</span> nn.LayerNorm(embdedding_dim)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>layer_norm2 <span class="op">=</span> nn.LayerNorm(embdedding_dim)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>final_layer_norm <span class="op">=</span> nn.LayerNorm(embdedding_dim)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="co"># learnable parameters in the layer</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>sampling_offsets_layer <span class="op">=</span> nn.Linear(embdedding_dim, num_heads <span class="op">*</span> num_levels <span class="op">*</span> n_points <span class="op">*</span><span class="dv">2</span>)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>attention_weights_layer <span class="op">=</span> nn.Linear(embdedding_dim,num_heads <span class="op">*</span> num_levels <span class="op">*</span> n_points)</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>value_projection_layer  <span class="op">=</span> nn.Linear(embdedding_dim,embdedding_dim)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>output_projection_layer <span class="op">=</span> nn.Linear(embdedding_dim,embdedding_dim)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="co">#initially we add the poistional_embedding to the input_embeds</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> inputs_embeds <span class="op">+</span> position_embeddings</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> value_projection_layer(inputs_embeds)</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> value.view(batch_size,num_queries, num_heads,embdedding_dim<span class="op">//</span>num_heads)</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Value shape = </span><span class="sc">{</span>value<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="co"># note for the below sampling offset and attention weights we are using the hidden state which have positional embedding information in it.</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>sampling_offsets <span class="op">=</span> sampling_offsets_layer(hidden_states)</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>sampling_offsets <span class="op">=</span> sampling_offsets.view(batch_size,num_queries,num_heads,num_levels,n_points,<span class="dv">2</span>) <span class="co"># </span><span class="al">NOTE</span><span class="co"> : We actually need to normalize this wrt to spatial size of each feature, but omitting here for simplicity</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights_layer(hidden_states)</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.view(batch_size,num_queries,num_heads,num_levels<span class="op">*</span>n_points)</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> torch.nn.functional.softmax(attention_weights, <span class="op">-</span><span class="dv">1</span>).view(batch_size,num_queries,num_heads,num_levels,n_points) <span class="co"># note here the softmax is along a row of size 16 ,intuitively this means there 4 points from 4 feature levels</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sampling offset shape = </span><span class="sc">{</span>sampling_offsets<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Attention weights shape = </span><span class="sc">{</span>attention_weights<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we have to modify the refrence points with these sampling points, what this means is that for each of the reference points , we need to look into 4 more points across 8 different heads</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="co"># so initially we had for each query 1 points account each feature dimension making it total 4 and now when we add this sampling offsets it makes 4 more across 8 differenet heads</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>reference_points <span class="op">=</span> reference_points[:,:,<span class="va">None</span>,:,<span class="va">None</span>,:]</span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Reference points with unsqueezed dimension for head and levels = </span><span class="sc">{</span>reference_points<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>sampling_location <span class="op">=</span> reference_points <span class="op">+</span> sampling_offsets</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final sampling locations = </span><span class="sc">{</span>sampling_location<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Value shape = torch.Size([4, 23890, 8, 32])
+Sampling offset shape = torch.Size([4, 23890, 8, 4, 4, 2])
+Attention weights shape = torch.Size([4, 23890, 8, 4, 4]) 
+
+Reference points with unsqueezed dimension for head and levels = torch.Size([4, 23890, 1, 4, 1, 2])
+Final sampling locations = torch.Size([4, 23890, 8, 4, 4, 2])</code></pre>
+</div>
+</div>
+<div id="960fe384" class="cell" data-execution_count="129">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the value tensor into per-level chunks based on spatial shapes</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>value_list <span class="op">=</span> value.split([h <span class="op">*</span> w <span class="cf">for</span> h, w <span class="kw">in</span> spatial_shapes_list], dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>batch_size, _, num_heads, hidden_dim <span class="op">=</span> value.shape</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the shape of each level's value tensor</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level, feature <span class="kw">in</span> <span class="bu">enumerate</span>(value_list):</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Splitted feature at level </span><span class="sc">{</span>level<span class="sc">}</span><span class="ss"> --&gt; </span><span class="sc">{</span>feature<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert normalized sampling locations from [0, 1] to [-1, 1] for grid_sample</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>sampling_grids <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> sampling_location <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Sampling grid shape  = </span><span class="sc">{</span>sampling_grids<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>sampling_value_list <span class="op">=</span> []</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level_id, (height, width) <span class="kw">in</span> <span class="bu">enumerate</span>(spatial_shapes_list):</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Reshape value tensor for grid sampling:</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (B, H*W, num_heads, C) → (B, num_heads, H*W, C) → (B*num_heads, C, H, W)</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    value_l <span class="op">=</span> (</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>        value_list[level_id]</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>        .flatten(<span class="dv">2</span>)               <span class="co"># (B, H*W, num_heads * C)</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>        .transpose(<span class="dv">1</span>, <span class="dv">2</span>)          <span class="co"># (B, num_heads * C, H*W)</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>        .reshape(batch_size <span class="op">*</span> num_heads, hidden_dim, height, width)</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Value at level </span><span class="sc">{</span>level_id<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>value_l<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Reshape sampling grid:</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (B, num_queries, num_heads, num_levels, num_points, 2)</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># → (B, num_heads, num_queries, num_points, 2)</span></span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># → (B*num_heads, num_queries, num_points, 2)</span></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>    sampling_grid_l <span class="op">=</span> sampling_grids[:, :, :, level_id].transpose(<span class="dv">1</span>, <span class="dv">2</span>).flatten(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sample values using bilinear interpolation</span></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>    sampling_value_l <span class="op">=</span> nn.functional.grid_sample(</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>        value_l,</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>        sampling_grid_l,</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">"bilinear"</span>,</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>        padding_mode<span class="op">=</span><span class="st">"zeros"</span>,</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>        align_corners<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>    sampling_value_list.append(sampling_value_l)</span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Splitted feature at level 0 --&gt; torch.Size([4, 17956, 8, 32])
+Splitted feature at level 1 --&gt; torch.Size([4, 4489, 8, 32])
+Splitted feature at level 2 --&gt; torch.Size([4, 1156, 8, 32])
+Splitted feature at level 3 --&gt; torch.Size([4, 289, 8, 32])
+
+Sampling grid shape  = torch.Size([4, 23890, 8, 4, 4, 2]) 
+
+Value at level 0 torch.Size([32, 32, 134, 134])
+Value at level 1 torch.Size([32, 32, 67, 67])
+Value at level 2 torch.Size([32, 32, 34, 34])
+Value at level 3 torch.Size([32, 32, 17, 17])</code></pre>
+</div>
+</div>
+<div id="787449fd" class="cell" data-execution_count="130">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> sampling_value_list:</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(f.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>torch.Size([32, 32, 23890, 4])
+torch.Size([32, 32, 23890, 4])
+torch.Size([32, 32, 23890, 4])
+torch.Size([32, 32, 23890, 4])</code></pre>
+</div>
+</div>
+<div id="5d4c7b29" class="cell" data-execution_count="131">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> torch.stack(sampling_value_list, dim<span class="op">=-</span><span class="dv">2</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape before flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> final_key_matrix.flatten(<span class="op">-</span><span class="dv">2</span>)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape after flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Stacked value matrix shape before flattening = torch.Size([32, 32, 23890, 4, 4])
+Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</code></pre>
+</div>
+</div>
+<div id="a55ae744" class="cell" data-execution_count="132">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.transpose(<span class="dv">1</span>, <span class="dv">2</span>).reshape(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>            batch_size <span class="op">*</span> num_heads, <span class="dv">1</span>, num_queries, num_levels <span class="op">*</span> n_points</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>attention_weights.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="132">
+<pre><code>torch.Size([32, 1, 23890, 16])</code></pre>
+</div>
+</div>
+<div id="dee924ad" class="cell" data-execution_count="133">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> final_key_matrix<span class="op">*</span>attention_weights</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="133">
+<pre><code>torch.Size([32, 32, 23890, 16])</code></pre>
+</div>
+</div>
+<div id="4955f2ef" class="cell" data-execution_count="134">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.<span class="bu">sum</span>(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="134">
+<pre><code>torch.Size([32, 32, 23890])</code></pre>
+</div>
+</div>
+<div id="6ed7d2a8" class="cell" data-execution_count="135">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.view(batch_size,num_heads<span class="op">*</span>hidden_dim,num_queries).transpose(<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="135">
+<pre><code>torch.Size([4, 23890, 256])</code></pre>
+</div>
+</div>
+<div id="67284cb3" class="cell" data-execution_count="136">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="136">
+<pre><code>torch.Size([4, 23890, 256])</code></pre>
+</div>
+</div>
+<div id="bde3f2ac" class="cell" data-execution_count="137">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.functional.dropout(hidden_states,p<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> inputs_embeds <span class="op">+</span> hidden_states <span class="co"># residual</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm1(hidden_states)</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>residual <span class="op">=</span> hidden_states</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.ReLU()(fc1(hidden_states))</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.functional.dropout(hidden_states,p<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> fc2(hidden_states)</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>hidden_states  <span class="op">=</span> nn.functional.dropout(hidden_states,p<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> residual<span class="op">+</span>hidden_states</span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm2(hidden_states)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="23f6f7fc" class="cell" data-execution_count="138">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>hidden_states.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="138">
+<pre><code>torch.Size([4, 23890, 256])</code></pre>
+</div>
+</div>
+</section>
+<section id="decoder" class="level2">
+<h2 class="anchored" data-anchor-id="decoder">Decoder</h2>
+<div id="e29ffd1b" class="cell" data-execution_count="139">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>num_query <span class="op">=</span> <span class="dv">300</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>embedding_dim <span class="op">=</span> encoder_output.shape[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>num_levels</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Learnable query and positional embeddings</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>position_embeddings <span class="op">=</span> nn.Parameter(torch.randn(num_query, embedding_dim)) <span class="co">#(num_query,embedding_dim)</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>position_embeddings <span class="op">=</span> position_embeddings[<span class="va">None</span>].expand(batch_size,<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>) <span class="co"># (batch_size,num_query,embedding_dim)</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>input_query <span class="op">=</span> nn.Parameter(torch.randn(num_query, embedding_dim)) <span class="co">#(num_query,embedding_dim)</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>input_query <span class="op">=</span> input_query[<span class="va">None</span>].expand(batch_size,<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>) <span class="co"># (batch_size,num_query,embedding_dim) </span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>fc1 <span class="op">=</span> nn.Linear(embdedding_dim, <span class="dv">512</span>)</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>fc2 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, embdedding_dim)</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>layer_norm1 <span class="op">=</span> nn.LayerNorm(embdedding_dim)</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>layer_norm2 <span class="op">=</span> nn.LayerNorm(embdedding_dim)</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>layer_norm3 <span class="op">=</span> nn.LayerNorm(embedding_dim)</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Linear layer to generate reference points from positional embeddings</span></span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>decoder_reference_point_layer <span class="op">=</span> nn.Linear(embedding_dim, <span class="dv">2</span>)</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate normalized reference points in [0, 1] range</span></span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>reference_points <span class="op">=</span> decoder_reference_point_layer(position_embeddings).sigmoid()  <span class="co"># shape: (num_query, 2)</span></span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Encode Reference points shape </span><span class="sc">{</span>reference_points<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Encode Reference points shape torch.Size([4, 300, 2])</code></pre>
+</div>
+</div>
+<div id="5ed83498" class="cell" data-execution_count="140">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>reference_points_input <span class="op">=</span> reference_points[:,:,<span class="va">None</span>,:].expand(batch_size,num_query,num_levels,<span class="dv">2</span>)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>reference_points_input.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="140">
+<pre><code>torch.Size([4, 300, 4, 2])</code></pre>
+</div>
+</div>
+<div id="970b4940" class="cell" data-execution_count="141">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initially here we will have the normal self attention.</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>residual <span class="op">=</span> input_query</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>multihead_attn <span class="op">=</span> nn.MultiheadAttention(embedding_dim, num_heads)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>self_attn_output, _ <span class="op">=</span> multihead_attn(input_query<span class="op">+</span>position_embeddings, input_query<span class="op">+</span>position_embeddings, input_query)</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>hidden_state_after_self_attention <span class="op">=</span> self_attn_output <span class="op">+</span> residual <span class="co"># residual connection. </span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>hidden_state_after_self_attention <span class="op">=</span> layer_norm1(hidden_state_after_self_attention)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>second_residual <span class="op">=</span> hidden_state_after_self_attention </span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Hidden state shape input to cross attention  </span><span class="sc">{</span>self_attn_output<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hidden state shape input to cross attention  torch.Size([4, 300, 256])</code></pre>
+</div>
+</div>
+<div id="3923392b" class="cell" data-execution_count="142">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>position_embeddings.shape,hidden_state_after_self_attention.shape,encoder_output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="142">
+<pre><code>(torch.Size([4, 300, 256]),
+ torch.Size([4, 300, 256]),
+ torch.Size([4, 23890, 256]))</code></pre>
+</div>
+</div>
+<div id="6a7a3ff1" class="cell" data-execution_count="143">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">## DEFORMABLE MULTI SCALE </span><span class="al">ATTENTION</span><span class="co">.</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>num_heads <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>num_levels  <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>n_points  <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>embdedding_dim <span class="op">=</span> hidden_state_after_self_attention.shape[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>batch_size, num_queries, _ <span class="op">=</span> hidden_state_after_self_attention.shape</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a><span class="co"># learnable parameters in the layer</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>sampling_offsets_layer <span class="op">=</span> nn.Linear(embdedding_dim, num_heads <span class="op">*</span> num_levels <span class="op">*</span> n_points <span class="op">*</span><span class="dv">2</span>)</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>attention_weights_layer <span class="op">=</span> nn.Linear(embdedding_dim,num_heads <span class="op">*</span> num_levels <span class="op">*</span> n_points)</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>value_projection_layer  <span class="op">=</span> nn.Linear(embdedding_dim,embdedding_dim)</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>output_projection_layer <span class="op">=</span> nn.Linear(embdedding_dim,embdedding_dim)</span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a><span class="co">#initially we add the poistional_embedding to the input_embeds</span></span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> hidden_state_after_self_attention <span class="op">+</span> position_embeddings</span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> value_projection_layer(encoder_output)</span>
+<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a>_,encoder_sequence_length,_ <span class="op">=</span> value.shape</span>
+<span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a>value <span class="op">=</span> value.view(batch_size,encoder_sequence_length, num_heads,embdedding_dim<span class="op">//</span>num_heads)</span>
+<span id="cb42-19"><a href="#cb42-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Value shape = </span><span class="sc">{</span>value<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb42-20"><a href="#cb42-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-21"><a href="#cb42-21" aria-hidden="true" tabindex="-1"></a><span class="co"># note for the below sampling offset and attention weights we are using the hidden state which have positional embedding information in it.</span></span>
+<span id="cb42-22"><a href="#cb42-22" aria-hidden="true" tabindex="-1"></a>sampling_offsets <span class="op">=</span> sampling_offsets_layer(hidden_states)</span>
+<span id="cb42-23"><a href="#cb42-23" aria-hidden="true" tabindex="-1"></a>sampling_offsets <span class="op">=</span> sampling_offsets.view(batch_size,num_queries,num_heads,num_levels,n_points,<span class="dv">2</span>) <span class="co"># </span><span class="al">NOTE</span><span class="co"> : We actually need to normalize this wrt to spatial size of each feature, but omitting here for simplicity</span></span>
+<span id="cb42-24"><a href="#cb42-24" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights_layer(hidden_states)</span>
+<span id="cb42-25"><a href="#cb42-25" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.view(batch_size,num_queries,num_heads,num_levels<span class="op">*</span>n_points)</span>
+<span id="cb42-26"><a href="#cb42-26" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> torch.nn.functional.softmax(attention_weights, <span class="op">-</span><span class="dv">1</span>).view(batch_size,num_queries,num_heads,num_levels,n_points) <span class="co"># note here the softmax is along a row of size 16 ,intuitively this means there 4 points from 4 feature levels</span></span>
+<span id="cb42-27"><a href="#cb42-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sampling offset shape = </span><span class="sc">{</span>sampling_offsets<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb42-28"><a href="#cb42-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Attention weights shape = </span><span class="sc">{</span>attention_weights<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
+<span id="cb42-29"><a href="#cb42-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-30"><a href="#cb42-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-31"><a href="#cb42-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Now we have to modify the refrence points with these sampling points, what this means is that for each of the reference points , we need to look into 4 more points across 8 different heads</span></span>
+<span id="cb42-32"><a href="#cb42-32" aria-hidden="true" tabindex="-1"></a><span class="co"># so initially we had for each query 1 points account each feature dimension making it total 4 and now when we add this sampling offsets it makes 4 more across 8 differenet heads</span></span>
+<span id="cb42-33"><a href="#cb42-33" aria-hidden="true" tabindex="-1"></a>reference_points_input <span class="op">=</span> reference_points_input[:,:,<span class="va">None</span>,:,<span class="va">None</span>,:]</span>
+<span id="cb42-34"><a href="#cb42-34" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Reference points with unsqueezed dimension for head and levels = </span><span class="sc">{</span>reference_points_input<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb42-35"><a href="#cb42-35" aria-hidden="true" tabindex="-1"></a>sampling_location <span class="op">=</span> reference_points_input <span class="op">+</span> sampling_offsets</span>
+<span id="cb42-36"><a href="#cb42-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final sampling locations = </span><span class="sc">{</span>sampling_location<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Value shape = torch.Size([4, 23890, 8, 32])
+Sampling offset shape = torch.Size([4, 300, 8, 4, 4, 2])
+Attention weights shape = torch.Size([4, 300, 8, 4, 4]) 
+
+Reference points with unsqueezed dimension for head and levels = torch.Size([4, 300, 1, 4, 1, 2])
+Final sampling locations = torch.Size([4, 300, 8, 4, 4, 2])</code></pre>
+</div>
+</div>
+<div id="86fa0133" class="cell" data-execution_count="144">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the value tensor into per-level chunks based on spatial shapes</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>value_list <span class="op">=</span> value.split([h <span class="op">*</span> w <span class="cf">for</span> h, w <span class="kw">in</span> spatial_shapes_list], dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>batch_size, _, num_heads, hidden_dim <span class="op">=</span> value.shape</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the shape of each level's value tensor</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level, feature <span class="kw">in</span> <span class="bu">enumerate</span>(value_list):</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Splitted feature at level </span><span class="sc">{</span>level<span class="sc">}</span><span class="ss"> --&gt; </span><span class="sc">{</span>feature<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert normalized sampling locations from [0, 1] to [-1, 1] for grid_sample</span></span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>sampling_grids <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> sampling_location <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Sampling grid shape  = </span><span class="sc">{</span>sampling_grids<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="ch">\n</span><span class="ss">"</span>)</span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>sampling_value_list <span class="op">=</span> []</span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level_id, (height, width) <span class="kw">in</span> <span class="bu">enumerate</span>(spatial_shapes_list):</span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Reshape value tensor for grid sampling:</span></span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (B, H*W, num_heads, C) → (B, num_heads, H*W, C) → (B*num_heads, C, H, W)</span></span>
+<span id="cb44-18"><a href="#cb44-18" aria-hidden="true" tabindex="-1"></a>    value_l <span class="op">=</span> (</span>
+<span id="cb44-19"><a href="#cb44-19" aria-hidden="true" tabindex="-1"></a>        value_list[level_id]</span>
+<span id="cb44-20"><a href="#cb44-20" aria-hidden="true" tabindex="-1"></a>        .flatten(<span class="dv">2</span>)               <span class="co"># (B, H*W, num_heads * C)</span></span>
+<span id="cb44-21"><a href="#cb44-21" aria-hidden="true" tabindex="-1"></a>        .transpose(<span class="dv">1</span>, <span class="dv">2</span>)          <span class="co"># (B, num_heads * C, H*W)</span></span>
+<span id="cb44-22"><a href="#cb44-22" aria-hidden="true" tabindex="-1"></a>        .reshape(batch_size <span class="op">*</span> num_heads, hidden_dim, height, width)</span>
+<span id="cb44-23"><a href="#cb44-23" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb44-24"><a href="#cb44-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Value at level </span><span class="sc">{</span>level_id<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>value_l<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb44-25"><a href="#cb44-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-26"><a href="#cb44-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Reshape sampling grid:</span></span>
+<span id="cb44-27"><a href="#cb44-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (B, num_queries, num_heads, num_levels, num_points, 2)</span></span>
+<span id="cb44-28"><a href="#cb44-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># → (B, num_heads, num_queries, num_points, 2)</span></span>
+<span id="cb44-29"><a href="#cb44-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># → (B*num_heads, num_queries, num_points, 2)</span></span>
+<span id="cb44-30"><a href="#cb44-30" aria-hidden="true" tabindex="-1"></a>    sampling_grid_l <span class="op">=</span> sampling_grids[:, :, :, level_id].transpose(<span class="dv">1</span>, <span class="dv">2</span>).flatten(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb44-31"><a href="#cb44-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-32"><a href="#cb44-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sample values using bilinear interpolation</span></span>
+<span id="cb44-33"><a href="#cb44-33" aria-hidden="true" tabindex="-1"></a>    sampling_value_l <span class="op">=</span> nn.functional.grid_sample(</span>
+<span id="cb44-34"><a href="#cb44-34" aria-hidden="true" tabindex="-1"></a>        value_l,</span>
+<span id="cb44-35"><a href="#cb44-35" aria-hidden="true" tabindex="-1"></a>        sampling_grid_l,</span>
+<span id="cb44-36"><a href="#cb44-36" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">"bilinear"</span>,</span>
+<span id="cb44-37"><a href="#cb44-37" aria-hidden="true" tabindex="-1"></a>        padding_mode<span class="op">=</span><span class="st">"zeros"</span>,</span>
+<span id="cb44-38"><a href="#cb44-38" aria-hidden="true" tabindex="-1"></a>        align_corners<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb44-39"><a href="#cb44-39" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb44-40"><a href="#cb44-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-41"><a href="#cb44-41" aria-hidden="true" tabindex="-1"></a>    sampling_value_list.append(sampling_value_l)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Splitted feature at level 0 --&gt; torch.Size([4, 17956, 8, 32])
+Splitted feature at level 1 --&gt; torch.Size([4, 4489, 8, 32])
+Splitted feature at level 2 --&gt; torch.Size([4, 1156, 8, 32])
+Splitted feature at level 3 --&gt; torch.Size([4, 289, 8, 32])
+
+Sampling grid shape  = torch.Size([4, 300, 8, 4, 4, 2]) 
+
+Value at level 0 torch.Size([32, 32, 134, 134])
+Value at level 1 torch.Size([32, 32, 67, 67])
+Value at level 2 torch.Size([32, 32, 34, 34])
+Value at level 3 torch.Size([32, 32, 17, 17])</code></pre>
+</div>
+</div>
+<div id="537666fc" class="cell" data-execution_count="145">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i,f <span class="kw">in</span> <span class="bu">enumerate</span>(sampling_value_list):</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Sampling points from each layer </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>f<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sampling points from each layer 0 torch.Size([32, 32, 300, 4])
+Sampling points from each layer 1 torch.Size([32, 32, 300, 4])
+Sampling points from each layer 2 torch.Size([32, 32, 300, 4])
+Sampling points from each layer 3 torch.Size([32, 32, 300, 4])</code></pre>
+</div>
+</div>
+<div id="bbfa786c" class="cell" data-execution_count="146">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> torch.stack(sampling_value_list, dim<span class="op">=-</span><span class="dv">2</span>)</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape before flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> final_key_matrix.flatten(<span class="op">-</span><span class="dv">2</span>)</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape after flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Stacked value matrix shape before flattening = torch.Size([32, 32, 300, 4, 4])
+Stacked value matrix shape after flattening = torch.Size([32, 32, 300, 16])</code></pre>
+</div>
+</div>
+<div id="4ef2f515" class="cell" data-execution_count="147">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.transpose(<span class="dv">1</span>, <span class="dv">2</span>).reshape(</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>            batch_size <span class="op">*</span> num_heads, <span class="dv">1</span>, num_queries, num_levels <span class="op">*</span> n_points</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>attention_weights.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="147">
+<pre><code>torch.Size([32, 1, 300, 16])</code></pre>
+</div>
+</div>
+<div id="cac02ec2" class="cell" data-execution_count="148">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> final_key_matrix<span class="op">*</span>attention_weights</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Output after attention </span><span class="sc">{</span>output<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.<span class="bu">sum</span>(dim<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final output after summation </span><span class="sc">{</span>output<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.view(batch_size,num_heads<span class="op">*</span>hidden_dim,num_queries).transpose(<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f" Output reshaped --&gt; </span><span class="sc">{</span>output<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output_projection_layer(output)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Output after attention torch.Size([32, 32, 300, 16])
+Final output after summation torch.Size([32, 32, 300])
+ Output reshaped --&gt; torch.Size([4, 300, 256])</code></pre>
+</div>
+</div>
+<div id="47091739" class="cell" data-execution_count="149">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="149">
+<pre><code>torch.Size([4, 300, 256])</code></pre>
+</div>
+</div>
+<div id="7f35de42" class="cell" data-execution_count="151">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.functional.dropout(output,p<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> second_residual <span class="op">+</span> hidden_states</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm2(hidden_states)</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Fully connected</span></span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>residual <span class="op">=</span> hidden_states</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.ReLU()(fc1(hidden_states))</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> fc2(hidden_states)</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> hidden_states <span class="op">+</span> residual</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm3(hidden_states)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="dabeac69" class="cell" data-execution_count="156">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>encoder_output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="156">
+<pre><code>torch.Size([4, 300, 256])</code></pre>
+</div>
+</div>
+<section id="final-box-and-class-prediction" class="level3">
+<h3 class="anchored" data-anchor-id="final-box-and-class-prediction">Final Box and class prediction</h3>
+<div id="743cd6ed" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,which is  the same space as the predicted offset.</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(encoder_output)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="153">
+<pre><code>torch.Size([4, 300, 2])</code></pre>
+</div>
+</div>
+<div id="2a9e8cfa" class="cell" data-execution_count="162">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,which is  the same space as the predicted offset.</span></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bring it back to the constrained space , by appling sigmoid, this making learning faster.</span></span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>reference_points_with_inverse_sigmoid <span class="op">=</span> torch.special.logit(reference_points)</span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a><span class="co"># say we have 10 classes</span></span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>num_class <span class="op">=</span> <span class="dv">10</span> </span>
+<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>class_pred <span class="op">=</span> nn.Linear(embdedding_dim,num_class)</span>
+<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a>box_head  <span class="op">=</span> nn.Sequential(</span>
+<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a>    nn.Linear(embdedding_dim, <span class="dv">512</span>),</span>
+<span id="cb61-12"><a href="#cb61-12" aria-hidden="true" tabindex="-1"></a>    nn.ReLU(inplace<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb61-13"><a href="#cb61-13" aria-hidden="true" tabindex="-1"></a>    nn.Linear(<span class="dv">512</span>, <span class="dv">4</span>),</span>
+<span id="cb61-14"><a href="#cb61-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb61-15"><a href="#cb61-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-16"><a href="#cb61-16" aria-hidden="true" tabindex="-1"></a>output_classes <span class="op">=</span> class_pred(encoder_output)</span>
+<span id="cb61-17"><a href="#cb61-17" aria-hidden="true" tabindex="-1"></a>box_pred <span class="op">=</span> box_head(encoder_output)</span>
+<span id="cb61-18"><a href="#cb61-18" aria-hidden="true" tabindex="-1"></a>box_pred[...,:<span class="dv">2</span>] <span class="op">+=</span> reference_points_with_inverse_sigmoid</span>
+<span id="cb61-19"><a href="#cb61-19" aria-hidden="true" tabindex="-1"></a>pred_boxes <span class="op">=</span> box_pred.sigmoid()</span>
+<span id="cb61-20"><a href="#cb61-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final box head shape </span><span class="sc">{</span>output_classes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb61-21"><a href="#cb61-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final pred boxes head shape </span><span class="sc">{</span>pred_boxes<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> "</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Final box head shape torch.Size([4, 300, 10])
+Final pred boxes head shape torch.Size([4, 300, 4]) </code></pre>
+</div>
+</div>
+<div id="471f3a4d" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Losses are similart to DETR, only difference is Deformable detr uses focal loss for  classification and for pred boxes,</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="co"># it uses the same loss like DETR where the losses are a combination of l1 loss and Generalized IOU loss</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="deformable-attention-compute-and-memory-complexity" class="level3">
+<h3 class="anchored" data-anchor-id="deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</h3>
+<p>We derive the compute and memory complexity for each attention type, specializing to the <strong>encoder</strong> and <strong>decoder</strong> settings, and show how <span class="math inline">\(L\)</span> (levels) and <span class="math inline">\(K\)</span> (points per level) enter the formulas.</p>
+<section id="notation" class="level4">
+<h4 class="anchored" data-anchor-id="notation">Notation</h4>
+<ul>
+<li><span class="math inline">\(N_q\)</span>: number of queries<br>
+</li>
+<li><span class="math inline">\(N_k\)</span>: number of keys<br>
+</li>
+<li><span class="math inline">\(M\)</span>: number of heads<br>
+</li>
+<li><span class="math inline">\(C\)</span>: channel dimension<br>
+</li>
+<li><span class="math inline">\(C_v = C/M\)</span>: per-head dimension<br>
+</li>
+<li><span class="math inline">\(H \times W\)</span>: spatial size of a single feature map<br>
+</li>
+<li><span class="math inline">\(H_l \times W_l\)</span>: spatial size at level <span class="math inline">\(l\)</span><br>
+</li>
+<li><span class="math inline">\(S = \sum_{l=1}^L H_l W_l\)</span>: total token count across levels<br>
+</li>
+<li><span class="math inline">\(K\)</span>: sampled points per head per level<br>
+</li>
+<li><span class="math inline">\(L\)</span>: number of feature levels</li>
+</ul>
+</section>
+<section id="preliminaries-what-contributes-to-cost" class="level4">
+<h4 class="anchored" data-anchor-id="preliminaries-what-contributes-to-cost">0) Preliminaries: What Contributes to Cost?</h4>
+<p>For any attention block, there are four compute buckets:</p>
+<ol type="1">
+<li><strong>Linear projections</strong> to form <span class="math inline">\(Q, K, V\)</span> (and the output projection): costs scale like <span class="math inline">\(\mathcal{O}(N C^2)\)</span>.</li>
+<li><strong>Score computation</strong> (e.g., <span class="math inline">\(QK^\top\)</span> or its sparse substitute): costs scale like <span class="math inline">\(\mathcal{O}(N_q N_k C_v M) = \mathcal{O}(N_q N_k C)\)</span> for dense attention.</li>
+<li><strong>Softmax + weighting</strong>: typically <span class="math inline">\(\mathcal{O}(N_q N_k M)\)</span> for softmax, and <span class="math inline">\(\mathcal{O}(N_q N_k C)\)</span> for multiplying by <span class="math inline">\(V\)</span>; the latter usually dominates.</li>
+<li><strong>Sampling / Interpolation</strong> <em>(deformable attention only)</em>: adds a term of approximately <span class="math inline">\(\mathcal{O}(N_q \cdot \text{\#samples} \cdot C)\)</span>; Appendix A.1 counts this as a constant <strong>“5”</strong> times per sample for bilinear interpolation + reduct</li>
+</ol>
+<p>Appendix A.1 counts this as a constant <strong>“5”</strong> times per sample for bilinear interpolation + reduction.</p>
+<p>Memory is dominated by storing the attention weights: <span class="math inline">\(\mathcal{O}(N_q N_k M)\)</span> for dense vs.&nbsp;<span class="math inline">\(\mathcal{O}(N_q M K)\)</span> (single-scale) or <span class="math inline">\(\mathcal{O}(N_q M L K)\)</span> (multi-scale).</p>
+<hr>
+</section>
+<section id="standard-multi-head-attention-eq.-1" class="level4">
+<h4 class="anchored" data-anchor-id="standard-multi-head-attention-eq.-1">1) Standard Multi-Head Attention (Eq. (1))</h4>
+<p><span class="math display">\[
+\text{MultiHeadAttn}(z_q, x) = \sum_{m=1}^M W_m \sum_{k \in \mathcal{K}} A_{mqk} W'_m x_k
+\]</span></p>
+<p><strong>Compute:</strong></p>
+<ul>
+<li>Projections:
+<ul>
+<li><span class="math inline">\(Q\)</span>: <span class="math inline">\(\mathcal{O}(N_q C^2)\)</span></li>
+<li><span class="math inline">\(K, V\)</span>: <span class="math inline">\(\mathcal{O}(N_k C^2)\)</span></li>
+</ul></li>
+<li>Scores (<span class="math inline">\(QK^\top\)</span>): <span class="math inline">\(\mathcal{O}(M \cdot N_q N_k C_v) = \mathcal{O}(N_q N_k C)\)</span></li>
+<li>Softmax: <span class="math inline">\(\mathcal{O}(M \cdot N_q N_k)\)</span></li>
+<li>Weighted sum (AV): <span class="math inline">\(\mathcal{O}(M \cdot N_q N_k C_v) = \mathcal{O}(N_q N_k C)\)</span></li>
+<li>Output projection: <span class="math inline">\(\mathcal{O}(N_q C^2)\)</span></li>
+</ul>
+<p><strong>Total (dense attention):</strong></p>
+<p><span class="math display">\[
+\boxed{\mathcal{O}\big(N_q C^2 + N_k C^2 + N_q N_k C\big)}
+\]</span></p>
+<p><strong>Memory:</strong></p>
+<ul>
+<li>Attention weights: <span class="math inline">\(\mathcal{O}(M N_q N_k)\)</span> (dominant)</li>
+<li>Key/value caches: <span class="math inline">\(\mathcal{O}(N_k C)\)</span></li>
+</ul>
+<p><strong>Specializations:</strong></p>
+<ul>
+<li><p><strong>DETR encoder</strong> (self-attention over pixels): <span class="math inline">\(N_q = N_k = S\)</span></p>
+<p><span class="math display">\[
+  \mathcal{O}(S^2 C) + \mathcal{O}(S C^2) \quad \text{(dominated by $S^2C$)}
+  \]</span></p></li>
+<li><p><strong>DETR decoder cross-attention</strong>: <span class="math inline">\(N_q = N\)</span> queries, <span class="math inline">\(N_k = S\)</span> pixels</p>
+<p><span class="math display">\[
+  \mathcal{O}(N S C) + \mathcal{O}((N+S)C^2)
+  \]</span></p></li>
+<li><p><strong>DETR decoder self-attention</strong> (queries only):</p>
+<p><span class="math display">\[
+  \mathcal{O}(2 N C^2 + N^2 C)
+  \]</span></p></li>
+</ul>
+<hr>
+</section>
+<section id="single-scale-deformable-attention-eq.-2" class="level4">
+<h4 class="anchored" data-anchor-id="single-scale-deformable-attention-eq.-2">2) Single-Scale Deformable Attention (Eq. (2))</h4>
+<p><span class="math display">\[
+\text{DeformAttn}(z_q, p_q, x) = \sum_{m=1}^M W_m \sum_{k=1}^K A_{mqk} W'_m x(p_q + p_{mqk})
+\]</span></p>
+<p>Each query attends <span class="math inline">\(K\)</span> sampled points per head around reference <span class="math inline">\(p_q\)</span>. Sampling uses bilinear interpolation.</p>
+<p><strong>Compute (Appendix A.1 derivation):</strong></p>
+<ul>
+<li>Predict offsets + weights (a single linear with <span class="math inline">\(3MK\)</span> output channels over <span class="math inline">\(z_q\)</span>): <span class="math inline">\(\mathcal{O}(3 N_q C M K)\)</span></li>
+<li>Value projection (<span class="math inline">\(W'_m x\)</span>): two possible ways
+<ul>
+<li>Precompute once on the whole map: <span class="math inline">\(\mathcal{O}(H W C^2)\)</span></li>
+<li>Or do per sampled value: <span class="math inline">\(\mathcal{O}(N_q K C^2)\)</span></li>
+</ul></li>
+<li>Sampling + weighted sum (bilinear + reduce): approx 5 ops per sample per channel: <span class="math inline">\(\mathcal{O}(5 N_q K C)\)</span></li>
+<li>Output projection: <span class="math inline">\(\mathcal{O}(N_q C^2)\)</span></li>
+</ul>
+<p>Putting it together (App. A.1):</p>
+<p><span class="math display">\[
+\boxed{
+\mathcal{O}\Big(N_q C^2 + \min(H W C^2, N_q K C^2) + 5 N_q K C + 3 N_q C M K\Big)
+}
+\]</span></p>
+<p>For typical settings (<span class="math inline">\(M=8\)</span>, <span class="math inline">\(K \leq 4\)</span>, <span class="math inline">\(C=256\)</span>), the paper notes <span class="math inline">\(5K + 3MK \ll C\)</span>, yielding the simplification:</p>
+<p><span class="math display">\[
+\boxed{\mathcal{O}\big(2 N_q C^2 + \min(H W C^2, N_q K C^2)\big)}
+\]</span></p>
+<p><strong>Memory:</strong></p>
+<ul>
+<li>Attention weights: <span class="math inline">\(\mathcal{O}(M N_q K)\)</span></li>
+<li>Offsets: <span class="math inline">\(\mathcal{O}(M N_q K \cdot 2)\)</span></li>
+<li>No dense <span class="math inline">\((N_q \times N_k)\)</span> matrix—this is the major win.</li>
+</ul>
+<p><strong>Specializations:</strong></p>
+<ul>
+<li><strong>Encoder (single-scale, queries are pixels):</strong> <span class="math inline">\(N_q = HW\)</span><br>
+With precomputation (<span class="math inline">\(W'_m x\)</span>): complexity becomes <span class="math inline">\(\mathcal{O}(HW C^2)\)</span>, i.e.&nbsp;<strong>linear in spatial size</strong> (vs.&nbsp;quadratic for dense).</li>
+<li><strong>Decoder cross-attention (single-scale):</strong> <span class="math inline">\(N_q = N\)</span><br>
+With per-query sampled values: <span class="math inline">\(\mathcal{O}(N K C^2)\)</span> (independent of <span class="math inline">\(HW\)</span>).</li>
+</ul>
+<hr>
+</section>
+<section id="multi-scale-deformable-attention-eq.-3" class="level4">
+<h4 class="anchored" data-anchor-id="multi-scale-deformable-attention-eq.-3">3) Multi-Scale Deformable Attention (Eq. (3))</h4>
+<p><span class="math display">\[
+\text{MSDeformAttn}(z_q, \hat{p}_q, \{x_l\}_{l=1}^L)
+= \sum_{m=1}^M W_m \sum_{l=1}^L \sum_{k=1}^K
+A_{mlqk} W'_m x_l(\phi_l(\hat{p}_q) + p_{mlqk})
+\]</span></p>
+<p>Each query samples <span class="math inline">\((L \times K)\)</span> points total.</p>
+<p><strong>Compute:</strong></p>
+<ul>
+<li>Predict offsets + weights: <span class="math inline">\(\mathcal{O}(3 N_q C M L K)\)</span></li>
+<li>Value projections (choose one):
+<ul>
+<li>Precompute on all levels: <span class="math inline">\(\sum_{l=1}^L \mathcal{O}(H_l W_l C^2) = \mathcal{O}(S C^2)\)</span></li>
+<li>Or per sampled value: <span class="math inline">\(\mathcal{O}(N_q L K C^2)\)</span></li>
+</ul></li>
+<li>Sampling + weighted sum: <span class="math inline">\(\mathcal{O}(5 N_q L K C)\)</span></li>
+<li>Output projection: <span class="math inline">\(\mathcal{O}(N_q C^2)\)</span></li>
+</ul>
+<p><strong>Total (multi-scale):</strong></p>
+<p><span class="math display">\[
+\boxed{
+\mathcal{O}\Big(N_q C^2 + \min(S C^2, N_q L K C^2) + 5 N_q L K C + 3 N_q C M L K\Big)
+}
+\]</span></p>
+<p>Under the same “small <span class="math inline">\((M, K, L)\)</span>” assumption as the paper (App. A.1):</p>
+<p><span class="math display">\[
+\boxed{
+\mathcal{O}\big(2 N_q C^2 + \min(S C^2, N_q L K C^2)\big)
+}
+\]</span></p>
+<p><strong>Memory:</strong></p>
+<ul>
+<li>Attention weights: <span class="math inline">\(\mathcal{O}(M N_q L K)\)</span></li>
+<li>Offsets: <span class="math inline">\(\mathcal{O}(M N_q L K \cdot 2)\)</span></li>
+<li>Again, no dense <span class="math inline">\((N_q \times S)\)</span> matrix.</li>
+</ul>
+<p><strong>Specializations:</strong></p>
+<ul>
+<li><strong>Deformable DETR encoder</strong> (multi-scale, queries are pixels across all levels): <span class="math inline">\(N_q = S\)</span><br>
+Precompute values per level <span class="math inline">\(\rightarrow\)</span> <span class="math display">\[
+\boxed{\mathcal{O}(S C^2)} \quad \text{(linear in total tokens across scales)}
+\]</span> This is the paper’s claim that encoder complexity becomes linear in spatial size (Section 4.1).</li>
+<li><strong>Deformable DETR decoder cross-attention:</strong> <span class="math inline">\(N_q = N\)</span> queries<br>
+Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span class="math display">\[
+\boxed{\mathcal{O}(N L K C^2)} \quad \text{(independent of spatial resolution)}
+\]</span></li>
+<li><strong>Decoder self-attention:</strong> unchanged from standard: <span class="math inline">\(\mathcal{O}(2 N C^2 + N^2 C)\)</span>.</li>
+</ul>
+<hr>
+</section>
+<section id="side-by-side-summary-dominant-terms" class="level4">
+<h4 class="anchored" data-anchor-id="side-by-side-summary-dominant-terms">4) Side-by-side Summary (Dominant Terms)</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 28%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Block</th>
+<th>Dense MHA (DETR)</th>
+<th>Deformable (single-scale)</th>
+<th>Deformable (multi-scale)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Generic</strong></td>
+<td><span class="math inline">\(\mathcal{O}(N_q C^2 + N_k C^2 + N_q N_k C)\)</span></td>
+<td><span class="math inline">\(\mathcal{O}(2 N_q C^2 + \min(HW C^2, N_q K C^2))\)</span></td>
+<td><span class="math inline">\(\mathcal{O}(2 N_q C^2 + \min(S C^2, N_q L K C^2))\)</span></td>
+</tr>
+<tr class="even">
+<td><strong>Encoder</strong></td>
+<td><span class="math inline">\(N_q = N_k = S \Rightarrow \mathcal{O}(S^2 C)\)</span></td>
+<td><span class="math inline">\(N_q = HW \Rightarrow \mathcal{O}(HW C^2)\)</span></td>
+<td><span class="math inline">\(N_q = S \Rightarrow \boxed{\mathcal{O}(S C^2)}\)</span></td>
+</tr>
+<tr class="odd">
+<td><strong>Decoder cross-attn</strong></td>
+<td><span class="math inline">\(N_q = N, N_k = S \Rightarrow \mathcal{O}(N S C)\)</span></td>
+<td><span class="math inline">\(\mathcal{O}(N K C^2)\)</span></td>
+<td><span class="math inline">\(\boxed{\mathcal{O}(N L K C^2)}\)</span></td>
+</tr>
+<tr class="even">
+<td><strong>Decoder self-attn</strong></td>
+<td><span class="math inline">\(\mathcal{O}(2 N C^2 + N^2 C)\)</span></td>
+<td>same</td>
+<td>same</td>
+</tr>
+<tr class="odd">
+<td><strong>Attention memory</strong></td>
+<td><span class="math inline">\(\mathcal{O}(M N_q N_k)\)</span></td>
+<td><span class="math inline">\(\mathcal{O}(M N_q K)\)</span></td>
+<td><span class="math inline">\(\mathcal{O}(M N_q L K)\)</span></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="practical-takeaways" class="level4">
+<h4 class="anchored" data-anchor-id="practical-takeaways">5) Practical Takeaways</h4>
+<ul>
+<li><strong>Encoder:</strong> dense self-attention is quadratic in spatial tokens; deformable makes it <strong>linear</strong> in the total number of tokens across scales (<span class="math inline">\(S\)</span>).</li>
+<li><strong>Decoder cross-attention:</strong> deformable cost depends on <span class="math inline">\((L K)\)</span> (small, fixed hyperparameters), not on image size, so it scales with the number of queries (<span class="math inline">\(N\)</span>) and channel dimension (<span class="math inline">\(C\)</span>), <strong>not</strong> with <span class="math inline">\(H, W\)</span>.</li>
+<li><strong>Memory:</strong> deformable avoids the <span class="math inline">\(\mathcal{O}(N_q N_k)\)</span> attention matrix, replacing it with <span class="math inline">\(\mathcal{O}(N_q L K)\)</span> structures—crucial for speed and convergence.</li>
+</ul>
+
+
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/akashprakas\.github\.io\/akashBlog\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
