@@ -224,10 +224,8 @@ window.Quarto = {
   <li><a href="#deformable-attention-1" id="toc-deformable-attention-1" class="nav-link" data-scroll-target="#deformable-attention-1">Deformable Attention</a></li>
   </ul></li>
   <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
-  <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a>
-  <ul class="collapse">
+  <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
   <li><a href="#credits" id="toc-credits" class="nav-link" data-scroll-target="#credits">Credits</a></li>
-  </ul></li>
   </ul>
 </nav>
     </div>
@@ -1121,8 +1119,9 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 <li><strong>Memory:</strong> deformable avoids the <span class="math inline">\(\mathcal{O}(N_q N_k)\)</span> attention matrix, replacing it with <span class="math inline">\(\mathcal{O}(N_q L K)\)</span> structures—crucial for speed and convergence.</li>
 </ul>
 </section>
-<section id="credits" class="level3">
-<h3 class="anchored" data-anchor-id="credits">Credits</h3>
+</section>
+<section id="credits" class="level2">
+<h2 class="anchored" data-anchor-id="credits">Credits</h2>
 <p>Most of the implementation closely follow the below two, so all credtits to them!!</p>
 <ul>
 <li><a href="https://github.com/fundamentalvision/Deformable-DETR">Original Detr Paper Implementation</a></li>
@@ -1130,7 +1129,6 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 </ul>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
