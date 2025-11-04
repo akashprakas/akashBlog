@@ -386,6 +386,7 @@ window.Quarto = {
   <li><a href="#transformer-decoder" id="toc-transformer-decoder" class="nav-link" data-scroll-target="#transformer-decoder">Transformer Decoder</a></li>
   <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
   <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
+  <li><a href="#key-improvements-of-deformable-detr-over-detr" id="toc-key-improvements-of-deformable-detr-over-detr" class="nav-link" data-scroll-target="#key-improvements-of-deformable-detr-over-detr">Key Improvements of Deformable DETR over DETR</a></li>
   <li><a href="#credits" id="toc-credits" class="nav-link" data-scroll-target="#credits">Credits</a></li>
   </ul>
 </nav>
@@ -1399,6 +1400,15 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 <li><strong>Memory:</strong> deformable avoids the <span class="math inline">\(\mathcal{O}(N_q N_k)\)</span> attention matrix, replacing it with <span class="math inline">\(\mathcal{O}(N_q L K)\)</span> structures—crucial for speed and convergence.</li>
 </ul>
 </section>
+</section>
+<section id="key-improvements-of-deformable-detr-over-detr" class="level2">
+<h2 class="anchored" data-anchor-id="key-improvements-of-deformable-detr-over-detr">Key Improvements of Deformable DETR over DETR</h2>
+<ul>
+<li>DETR needs <strong>500 epochs</strong> to reach ~42 AP, while Deformable DETR achieves <strong>43.8 AP in just 50 epochs</strong>.</li>
+<li>Training time drops drastically: 325 GPU hours vs.&nbsp;2000+ for DETR.</li>
+<li>Inference speed: Deformable DETR runs at <strong>19 FPS</strong>, faster than DETR-DC5 (12 FPS).</li>
+<li>Deformable DETR converges <strong>10× faster</strong> than DETR-DC5.</li>
+</ul>
 </section>
 <section id="credits" class="level2">
 <h2 class="anchored" data-anchor-id="credits">Credits</h2>
