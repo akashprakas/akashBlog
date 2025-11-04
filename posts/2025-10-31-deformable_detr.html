@@ -382,7 +382,7 @@ window.Quarto = {
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#why-was-deformable-detr-needed" id="toc-why-was-deformable-detr-needed" class="nav-link" data-scroll-target="#why-was-deformable-detr-needed">Why was Deformable DETR needed?</a></li>
   <li><a href="#convolutional-backbone" id="toc-convolutional-backbone" class="nav-link" data-scroll-target="#convolutional-backbone">Convolutional backbone</a></li>
-  <li><a href="#trasformer-encoder" id="toc-trasformer-encoder" class="nav-link" data-scroll-target="#trasformer-encoder">Trasformer Encoder</a></li>
+  <li><a href="#transformer-encoder" id="toc-transformer-encoder" class="nav-link" data-scroll-target="#transformer-encoder">Transformer Encoder</a></li>
   <li><a href="#transformer-decoder" id="toc-transformer-decoder" class="nav-link" data-scroll-target="#transformer-decoder">Transformer Decoder</a></li>
   <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
   <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
@@ -566,8 +566,8 @@ Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
 </div>
 </div>
 </section>
-<section id="trasformer-encoder" class="level2">
-<h2 class="anchored" data-anchor-id="trasformer-encoder">Trasformer Encoder</h2>
+<section id="transformer-encoder" class="level2">
+<h2 class="anchored" data-anchor-id="transformer-encoder">Transformer Encoder</h2>
 <p>Once we have the flattened feature maps from multiple scales (typically 4 levels), these serve as the <strong>queries</strong> in the encoder. In standard Transformer attention, each query interacts with all keys via dot-product attention, which becomes computationally infeasible when the sequence length is large (e.g., 23,890 tokens). This quadratic complexity is a major bottleneck.</p>
 <p>To address this, <strong>Deformable DETR introduces a sparse attention mechanism</strong>. Instead of attending to all positions, each query attends to a small, fixed number of sampling points—<strong>K = 4 per feature level</strong>, across <strong>L = 4 levels</strong>, resulting in <strong>16 sampling points per query</strong>. These points are not fixed but are <strong>learned dynamically</strong>.</p>
 <p>Here’s how it works:</p>
