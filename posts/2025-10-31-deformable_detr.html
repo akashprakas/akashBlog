@@ -8,7 +8,7 @@
 
 <meta name="dcterms.date" content="2025-10-31">
 
-<title>Deformable DETR Tiny Implemenation – Akash’s Blog</title>
+<title>Deformable DETR a tiny Implemenation – Akash’s Blog</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -349,7 +349,7 @@ window.Quarto = {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Deformable DETR Tiny Implemenation</h1>
+      <h1 class="title">Deformable DETR a tiny Implemenation</h1>
                                 <div class="quarto-categories">
                 <div class="quarto-category">jupyter</div>
               </div>
@@ -382,8 +382,8 @@ window.Quarto = {
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#why-was-deformable-detr-needed" id="toc-why-was-deformable-detr-needed" class="nav-link" data-scroll-target="#why-was-deformable-detr-needed">Why was Deformable DETR needed?</a></li>
   <li><a href="#convolutional-backbone" id="toc-convolutional-backbone" class="nav-link" data-scroll-target="#convolutional-backbone">Convolutional backbone</a></li>
-  <li><a href="#encoder" id="toc-encoder" class="nav-link" data-scroll-target="#encoder">Encoder</a></li>
-  <li><a href="#decoder" id="toc-decoder" class="nav-link" data-scroll-target="#decoder">Decoder</a></li>
+  <li><a href="#trasformer-encoder" id="toc-trasformer-encoder" class="nav-link" data-scroll-target="#trasformer-encoder">Trasformer Encoder</a></li>
+  <li><a href="#transformer-decoder" id="toc-transformer-decoder" class="nav-link" data-scroll-target="#transformer-decoder">Transformer Decoder</a></li>
   <li><a href="#final-box-and-class-prediction" id="toc-final-box-and-class-prediction" class="nav-link" data-scroll-target="#final-box-and-class-prediction">Final Box and class prediction</a></li>
   <li><a href="#deformable-attention-compute-and-memory-complexity" id="toc-deformable-attention-compute-and-memory-complexity" class="nav-link" data-scroll-target="#deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</a></li>
   <li><a href="#credits" id="toc-credits" class="nav-link" data-scroll-target="#credits">Credits</a></li>
@@ -428,6 +428,23 @@ window.Quarto = {
 <section id="convolutional-backbone" class="level2">
 <h2 class="anchored" data-anchor-id="convolutional-backbone">Convolutional backbone</h2>
 <p><img src="images/deformDetrBackbone.png" class="img-fluid"></p>
+<ol type="1">
+<li><p><strong>Feature Extraction via FPN</strong><br>
+The input image is passed through a Feature Pyramid Network (FPN), which extracts multi-scale feature maps from different layers of the backbone. These feature maps capture hierarchical representations at varying resolutions.</p></li>
+<li><p><strong>Positional Embedding for Feature Maps</strong><br>
+For each feature map, we compute a positional embedding using sine-cosine encoding, similar to the method described in the original Transformer paper.<br>
+However, in this setup: (which is same as DETR)</p>
+<ul>
+<li>The feature maps are 2D (height × width), so the positional encoding must reflect both spatial dimensions.</li>
+<li>If the embedding dimension is 256:
+<ul>
+<li>The first 128 dimensions encode <strong>horizontal (x-axis)</strong> positions.</li>
+<li>The next 128 dimensions encode <strong>vertical (y-axis)</strong> positions.</li>
+</ul></li>
+<li>This results in a positional embedding tensor of shape <code>(B, 256, H, W)</code> for each feature map, where <code>B</code> is the batch size.</li>
+</ul></li>
+<li><p><strong>Level Embeddings</strong> In addition to positional embeddings, DETR introduces a learnable level embedding for each feature scale. For example, with 4 feature levels, we have a tensor of shape (4, 256). This embedding is added to the corresponding feature map after positional encoding, helping the model distinguish between different scales.</p></li>
+</ol>
 <div id="fbe6b1b4" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pixel_values <span class="op">=</span> torch.randn(<span class="dv">4</span>,<span class="dv">3</span>,<span class="dv">1065</span>,<span class="dv">1066</span>) </span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -549,8 +566,22 @@ Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
 </div>
 </div>
 </section>
-<section id="encoder" class="level2">
-<h2 class="anchored" data-anchor-id="encoder">Encoder</h2>
+<section id="trasformer-encoder" class="level2">
+<h2 class="anchored" data-anchor-id="trasformer-encoder">Trasformer Encoder</h2>
+<p>Once we have the flattened feature maps from multiple scales (typically 4 levels), these serve as the <strong>queries</strong> in the encoder. In standard Transformer attention, each query interacts with all keys via dot-product attention, which becomes computationally infeasible when the sequence length is large (e.g., 23,890 tokens). This quadratic complexity is a major bottleneck.</p>
+<p>To address this, <strong>Deformable DETR introduces a sparse attention mechanism</strong>. Instead of attending to all positions, each query attends to a small, fixed number of sampling points—<strong>K = 4 per feature level</strong>, across <strong>L = 4 levels</strong>, resulting in <strong>16 sampling points per query</strong>. These points are not fixed but are <strong>learned dynamically</strong>.</p>
+<p>Here’s how it works:</p>
+<ul>
+<li>Each query has a <strong>reference point</strong> (normalized coordinates in [0, 1]²), typically its own spatial location.</li>
+<li>Instead of using separate query and key projection matrices, Deformable DETR uses:
+<ul>
+<li>A <strong>sampling offset prediction layer</strong>: a feed-forward network that predicts offsets from the reference point for each attention head and feature level.</li>
+<li>An <strong>attention weight prediction layer</strong>: another feed-forward network that assigns attention scores to each of the sampled points.</li>
+</ul></li>
+<li>The sampled points are fractional, so <strong>bilinear interpolation</strong> is used to extract features from the input maps.</li>
+<li>The attention weights are normalized across all sampled points (total of 16 per query), and the final output is a weighted sum of the interpolated features.</li>
+</ul>
+<p>This design drastically reduces computational complexity while maintaining the ability to model spatial relationships. It also enables efficient multi-scale feature aggregation without relying on FPNs.</p>
 <div id="2cf651a8" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. we need to apply a initial dropout before passing it to the encoder </span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> nn.functional.dropout(inputs_embeds, p<span class="op">=</span><span class="fl">0.1</span>)</span>
@@ -796,10 +827,52 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <pre><code>torch.Size([4, 23890, 256])</code></pre>
 </div>
 </div>
+<p>The above hidden state acts as the input to the next decoder layer, here i am showing only one decoder layer and in the paper they used 8, the output of the final decoder layer will be passed as input to the decoder for cross attention.</p>
 </section>
 </section>
-<section id="decoder" class="level2">
-<h2 class="anchored" data-anchor-id="decoder">Decoder</h2>
+<section id="transformer-decoder" class="level2">
+<h2 class="anchored" data-anchor-id="transformer-decoder">Transformer Decoder</h2>
+<p>The decoder follows the same overall design as DETR but with key modifications for efficiency:</p>
+<section id="learnable-object-queries" class="level4">
+<h4 class="anchored" data-anchor-id="learnable-object-queries"><strong>1. Learnable Object Queries</strong></h4>
+<ul>
+<li>The decoder starts with a fixed set of <strong>learnable queries</strong> (300 in the paper) and <strong>learnable positional embeddings.</strong></li>
+<li>These queries represent potential objects and are refined through multiple decoder layers.</li>
+</ul>
+</section>
+<section id="self-attention" class="level4">
+<h4 class="anchored" data-anchor-id="self-attention"><strong>2. Self-Attention</strong></h4>
+<ul>
+<li>The first step is <strong>self-attention</strong> among the 300 queries, this is similar to the DETR paper.</li>
+</ul>
+</section>
+<section id="cross-attention-with-deformable-attention" class="level4">
+<h4 class="anchored" data-anchor-id="cross-attention-with-deformable-attention"><strong>3. Cross-Attention with Deformable Attention</strong></h4>
+<ul>
+<li>The second step is <strong>cross-attention</strong> between the decoder queries and the encoder’s multi-scale feature maps.</li>
+<li>Instead of standard dense attention (which was the case in DETR), <strong>Deformable DETR uses multi-scale deformable attention</strong>, similar to the encoder:
+<ul>
+<li>Each query predicts a <strong>reference point</strong> in normalized coordinates.</li>
+<li>Two lightweight networks predict:
+<ul>
+<li><strong>Sampling offsets</strong> for each attention head and feature level.</li>
+<li><strong>Attention weights</strong> for the sampled points.</li>
+</ul></li>
+<li>For each query:
+<ul>
+<li><strong>K = 4 sampling points per level</strong>, across <strong>L = 4 levels</strong>, giving <strong>16 points total</strong>.</li>
+<li>Features at these fractional locations are extracted using <strong>bilinear interpolation</strong>.</li>
+<li>The weighted sum of these sampled features forms the cross-attention output.</li>
+</ul></li>
+</ul></li>
+</ul>
+</section>
+<section id="why-this-matters" class="level4">
+<h4 class="anchored" data-anchor-id="why-this-matters"><strong>Why This Matters</strong></h4>
+<ul>
+<li>This design avoids attending to all pixels, reducing complexity from quadratic to linear in spatial size.</li>
+<li>It also aligns attention with predicted object locations, improving convergence and detection accuracy.</li>
+</ul>
 <div id="e29ffd1b" class="cell" data-execution_count="39">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>num_query <span class="op">=</span> <span class="dv">300</span></span>
@@ -915,6 +988,7 @@ Reference points with unsqueezed dimension for head and levels = torch.Size([4, 
 Final sampling locations = torch.Size([4, 300, 8, 4, 4, 2])</code></pre>
 </div>
 </div>
+</section>
 <section id="deformable-attention-1" class="level4">
 <h4 class="anchored" data-anchor-id="deformable-attention-1">Deformable Attention</h4>
 <div id="86fa0133" class="cell" data-execution_count="44">
@@ -1045,6 +1119,19 @@ Final output after summation torch.Size([32, 32, 300])
 </section>
 <section id="final-box-and-class-prediction" class="level2">
 <h2 class="anchored" data-anchor-id="final-box-and-class-prediction">Final Box and class prediction</h2>
+<p>After the decoder produces object query embeddings, two heads operate in parallel:</p>
+<ol type="1">
+<li><p><strong>Classification Head</strong><br>
+A linear layer maps each query embedding to class logits (e.g., 10 classes). The authors uses <strong>Sigmoid + Focal Loss</strong> for multi-label classification</p></li>
+<li><p><strong>Box Regression Head</strong><br>
+A small feed-forward network predicts four values: offsets for ((x, y, w, h)) in <strong>logit space</strong> (unconstrained).</p>
+<ul>
+<li>The query’s <strong>reference point</strong> (normalized in ([0,1])) is converted to logit space using <strong>inverse sigmoid</strong>.</li>
+<li>Offsets are added to this reference point for the center coordinates.</li>
+<li>Finally, a <strong>sigmoid</strong> maps the result back to normalized coordinates ([0,1]^4), giving the final bounding box.</li>
+</ul></li>
+</ol>
+<p>This design stabilizes training because the network learns relative offsets in an unconstrained space rather than directly regressing normalized coordinates, which accelerates convergence and improves accuracy.</p>
 <div id="2a9e8cfa" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
 <span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,</span></span>
