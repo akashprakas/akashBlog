@@ -425,6 +425,19 @@ window.Quarto = {
 <p>Most modern object detection networks leverage Feature Pyramid Networks (FPN) to handle objects at multiple scales. However, DETR cannot easily incorporate FPN because its global self-attention operates over the entire feature map, making multi-scale attention computationally expensive. Deformable DETR addresses this by introducing multi-scale deformable attention, which selectively attends to a small set of key points across different feature levels instead of the entire map. This enables efficient multi-scale feature aggregation without exploding computational cost.</p>
 <pre><code>2. Long Training Time</code></pre>
 <p>DETR requires extensive training because the model must learn which parts of the feature map to attend to from scratch, which is slow to converge. Deformable DETR solves this by using a Deformable Attention Module, which focuses on a sparse set of relevant keys rather than all possible keys. This reduces complexity and accelerates convergence significantly.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>📺 Watch the Explanation in Youtube
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://youtu.be/RY54XtV8SzM">Introduction to DETR</a></p>
+</div>
+</div>
 </section>
 <section id="convolutional-backbone" class="level2">
 <h2 class="anchored" data-anchor-id="convolutional-backbone">Convolutional backbone</h2>
@@ -583,6 +596,19 @@ Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
 <li>The attention weights are normalized across all sampled points (total of 16 per query), and the final output is a weighted sum of the interpolated features.</li>
 </ul>
 <p>This design drastically reduces computational complexity while maintaining the ability to model spatial relationships. It also enables efficient multi-scale feature aggregation without relying on FPNs.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>📺 Watch the Explanation in Youtube
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://youtu.be/40Qs_y63Bx4">Deformable Attention</a></p>
+</div>
+</div>
 <div id="2cf651a8" class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. we need to apply a initial dropout before passing it to the encoder </span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> nn.functional.dropout(inputs_embeds, p<span class="op">=</span><span class="fl">0.1</span>)</span>
@@ -874,6 +900,19 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <li>This design avoids attending to all pixels, reducing complexity from quadratic to linear in spatial size.</li>
 <li>It also aligns attention with predicted object locations, improving convergence and detection accuracy.</li>
 </ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>📺 Watch the Explanation in Youtube
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://youtu.be/bvzp4X26SOs">Deformable Decoder</a></p>
+</div>
+</div>
 <div id="e29ffd1b" class="cell" data-execution_count="39">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>num_query <span class="op">=</span> <span class="dv">300</span></span>
@@ -1168,6 +1207,19 @@ Final pred boxes head shape torch.Size([4, 300, 4]) </code></pre>
 </section>
 <section id="deformable-attention-compute-and-memory-complexity" class="level2">
 <h2 class="anchored" data-anchor-id="deformable-attention-compute-and-memory-complexity">Deformable Attention: Compute and Memory Complexity</h2>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>📺 Watch the Explanation in Youtube
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://youtu.be/62XbGHl_DEE">Deformable Decoder</a></p>
+</div>
+</div>
 <p>The paper have a good summary of the complexity of the computation here I will show it bit in detail, specializing to the <strong>encoder</strong> and <strong>decoder</strong> settings, and show how <span class="math inline">\(L\)</span> (levels) and <span class="math inline">\(K\)</span> (points per level) enter the formulas.</p>
 <section id="notation" class="level4">
 <h4 class="anchored" data-anchor-id="notation">Notation</h4>
