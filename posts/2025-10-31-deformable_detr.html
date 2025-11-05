@@ -399,7 +399,7 @@ window.Quarto = {
 
 
 
-<div id="86a36c34" class="cell" data-execution_count="14">
+<div id="86a36c34" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch </span>
@@ -459,7 +459,7 @@ However, in this setup: (which is same as DETR)</p>
 </ul></li>
 <li><p><strong>Level Embeddings</strong> In addition to positional embeddings, DETR introduces a learnable level embedding for each feature scale. For example, with 4 feature levels, we have a tensor of shape (4, 256). This embedding is added to the corresponding feature map after positional encoding, helping the model distinguish between different scales.</p></li>
 </ol>
-<div id="fbe6b1b4" class="cell">
+<div id="fbe6b1b4" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pixel_values <span class="op">=</span> torch.randn(<span class="dv">4</span>,<span class="dv">3</span>,<span class="dv">1065</span>,<span class="dv">1066</span>) </span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1 .Initially we need to pass the images through the FPN and get features across different layers,</span></span>
@@ -520,7 +520,7 @@ Reduced feature map 3 shape: torch.Size([4, 256, 34, 34])
 Reduced feature map 4 shape: torch.Size([4, 256, 17, 17])</code></pre>
 </div>
 </div>
-<div id="f8f37015" class="cell" data-execution_count="7">
+<div id="f8f37015" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 5 . Also we need a learnable Level embedding for each levels , since here we are using 4 layers, </span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># and 256 embedding dim , the size of the level embedding will be (4,256)</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Learnable level embedding (in actual model this would be nn.Parameter)</span></span>
@@ -567,7 +567,7 @@ Level 4:
   Positional + Level Embedding shape: torch.Size([4, 289, 256])</code></pre>
 </div>
 </div>
-<div id="da3098e3" class="cell" data-execution_count="27">
+<div id="da3098e3" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 7: Concatenate along sequence dimension (dim=1)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> torch.cat(features_flatten, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, 256)</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>position_embeddings <span class="op">=</span> torch.cat(positional_and_level_embedding_flattened, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># shape: (B, total_seq_len, 256)</span></span>
@@ -609,7 +609,7 @@ Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
 <p><a href="https://youtu.be/40Qs_y63Bx4">Deformable Attention</a></p>
 </div>
 </div>
-<div id="2cf651a8" class="cell">
+<div id="2cf651a8" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. we need to apply a initial dropout before passing it to the encoder </span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>inputs_embeds <span class="op">=</span> nn.functional.dropout(inputs_embeds, p<span class="op">=</span><span class="fl">0.1</span>)</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>batch_size <span class="op">=</span> inputs_embeds.shape[<span class="dv">0</span>]</span>
@@ -653,7 +653,7 @@ Concatenated Position Embeddings shape: torch.Size([4, 23890, 256])</code></pre>
 <pre><code>Reference points shape input to encoder  torch.Size([4, 23890, 4, 2])</code></pre>
 </div>
 </div>
-<div id="937677b6" class="cell">
+<div id="937677b6" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#so for now each query we have 4 positions (x,y) across 4 different channels, now this will be passed to the encoder.</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">## DEFORMABLE MULTI SCALE </span><span class="al">ATTENTION</span><span class="co">.</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -724,7 +724,7 @@ Final sampling locations = torch.Size([4, 23890, 8, 4, 4, 2])</code></pre>
 <section id="deformable-attention" class="level4">
 <h4 class="anchored" data-anchor-id="deformable-attention">Deformable Attention</h4>
 <p><img src="images/defor_detrn_attn.png" class="img-fluid"></p>
-<div id="960fe384" class="cell" data-execution_count="30">
+<div id="960fe384" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the value tensor into per-level chunks based on spatial shapes</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>value_list <span class="op">=</span> value.split([h <span class="op">*</span> w <span class="cf">for</span> h, w <span class="kw">in</span> spatial_shapes_list], dim<span class="op">=</span><span class="dv">1</span>)</span>
@@ -782,7 +782,7 @@ Value at level 2 torch.Size([32, 32, 34, 34])
 Value at level 3 torch.Size([32, 32, 17, 17])</code></pre>
 </div>
 </div>
-<div id="787449fd" class="cell" data-execution_count="31">
+<div id="787449fd" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> sampling_value_list:</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(f.shape)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -792,7 +792,7 @@ torch.Size([32, 32, 23890, 4])
 torch.Size([32, 32, 23890, 4])</code></pre>
 </div>
 </div>
-<div id="5d4c7b29" class="cell" data-execution_count="32">
+<div id="5d4c7b29" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> torch.stack(sampling_value_list, dim<span class="op">=-</span><span class="dv">2</span>)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape before flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> final_key_matrix.flatten(<span class="op">-</span><span class="dv">2</span>)</span>
@@ -802,38 +802,38 @@ torch.Size([32, 32, 23890, 4])</code></pre>
 Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</code></pre>
 </div>
 </div>
-<div id="a55ae744" class="cell" data-execution_count="33">
+<div id="a55ae744" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.transpose(<span class="dv">1</span>, <span class="dv">2</span>).reshape(</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>            batch_size <span class="op">*</span> num_heads, <span class="dv">1</span>, num_queries, num_levels <span class="op">*</span> n_points</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>        )</span>
 <span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>attention_weights.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="33">
+<div class="cell-output cell-output-display" data-execution_count="11">
 <pre><code>torch.Size([32, 1, 23890, 16])</code></pre>
 </div>
 </div>
-<div id="dee924ad" class="cell" data-execution_count="34">
+<div id="dee924ad" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> final_key_matrix<span class="op">*</span>attention_weights</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="34">
+<div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>torch.Size([32, 32, 23890, 16])</code></pre>
 </div>
 </div>
-<div id="4955f2ef" class="cell" data-execution_count="35">
+<div id="4955f2ef" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.<span class="bu">sum</span>(<span class="op">-</span><span class="dv">1</span>)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="35">
+<div class="cell-output cell-output-display" data-execution_count="13">
 <pre><code>torch.Size([32, 32, 23890])</code></pre>
 </div>
 </div>
-<div id="6ed7d2a8" class="cell" data-execution_count="36">
+<div id="6ed7d2a8" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.view(batch_size,num_heads<span class="op">*</span>hidden_dim,num_queries).transpose(<span class="dv">1</span>,<span class="dv">2</span>)</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output_projection_layer(output)</span>
 <span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="36">
+<div class="cell-output cell-output-display" data-execution_count="14">
 <pre><code>torch.Size([4, 23890, 256])</code></pre>
 </div>
 </div>
-<div id="bde3f2ac" class="cell" data-execution_count="37">
+<div id="bde3f2ac" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Feed forward layers </span></span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.functional.dropout(hidden_states,p<span class="op">=</span><span class="fl">0.1</span>)</span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> inputs_embeds <span class="op">+</span> hidden_states <span class="co"># residual</span></span>
@@ -848,9 +848,9 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> residual<span class="op">+</span>hidden_states</span>
 <span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm2(hidden_states)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="23f6f7fc" class="cell" data-execution_count="38">
+<div id="23f6f7fc" class="cell" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>hidden_states.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="38">
+<div class="cell-output cell-output-display" data-execution_count="16">
 <pre><code>torch.Size([4, 23890, 256])</code></pre>
 </div>
 </div>
@@ -894,8 +894,8 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 </ul></li>
 </ul>
 </section>
-<section id="why-this-matters" class="level4">
-<h4 class="anchored" data-anchor-id="why-this-matters"><strong>Why This Matters</strong></h4>
+<section id="how-this-helps" class="level4">
+<h4 class="anchored" data-anchor-id="how-this-helps"><strong>How this helps!!</strong></h4>
 <ul>
 <li>This design avoids attending to all pixels, reducing complexity from quadratic to linear in spatial size.</li>
 <li>It also aligns attention with predicted object locations, improving convergence and detection accuracy.</li>
@@ -913,7 +913,7 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <p><a href="https://youtu.be/bvzp4X26SOs">Deformable Decoder</a></p>
 </div>
 </div>
-<div id="e29ffd1b" class="cell" data-execution_count="39">
+<div id="e29ffd1b" class="cell" data-execution_count="17">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>num_query <span class="op">=</span> <span class="dv">300</span></span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>embedding_dim <span class="op">=</span> encoder_output.shape[<span class="op">-</span><span class="dv">1</span>]</span>
@@ -941,14 +941,14 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <pre><code>Encode Reference points shape torch.Size([4, 300, 2])</code></pre>
 </div>
 </div>
-<div id="5ed83498" class="cell" data-execution_count="40">
+<div id="5ed83498" class="cell" data-execution_count="18">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>reference_points_input <span class="op">=</span> reference_points[:,:,<span class="va">None</span>,:].expand(batch_size,num_query,num_levels,<span class="dv">2</span>)</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>reference_points_input.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="40">
+<div class="cell-output cell-output-display" data-execution_count="18">
 <pre><code>torch.Size([4, 300, 4, 2])</code></pre>
 </div>
 </div>
-<div id="970b4940" class="cell" data-execution_count="41">
+<div id="970b4940" class="cell" data-execution_count="19">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initially here we will have the normal self attention.</span></span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>residual <span class="op">=</span> input_query</span>
 <span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>multihead_attn <span class="op">=</span> nn.MultiheadAttention(embedding_dim, num_heads)</span>
@@ -961,15 +961,15 @@ Stacked value matrix shape after flattening = torch.Size([32, 32, 23890, 16])</c
 <pre><code>Hidden state shape input to cross attention  torch.Size([4, 300, 256])</code></pre>
 </div>
 </div>
-<div id="3923392b" class="cell" data-execution_count="42">
+<div id="3923392b" class="cell" data-execution_count="20">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>position_embeddings.shape,hidden_state_after_self_attention.shape,encoder_output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="42">
+<div class="cell-output cell-output-display" data-execution_count="20">
 <pre><code>(torch.Size([4, 300, 256]),
  torch.Size([4, 300, 256]),
  torch.Size([4, 23890, 256]))</code></pre>
 </div>
 </div>
-<div id="6a7a3ff1" class="cell">
+<div id="6a7a3ff1" class="cell" data-execution_count="21">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">## DEFORMABLE MULTI SCALE </span><span class="al">ATTENTION</span><span class="co">.</span></span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>num_heads <span class="op">=</span> <span class="dv">8</span></span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>num_levels  <span class="op">=</span> <span class="dv">4</span></span>
@@ -1031,7 +1031,7 @@ Final sampling locations = torch.Size([4, 300, 8, 4, 4, 2])</code></pre>
 </section>
 <section id="deformable-attention-1" class="level4">
 <h4 class="anchored" data-anchor-id="deformable-attention-1">Deformable Attention</h4>
-<div id="86fa0133" class="cell" data-execution_count="44">
+<div id="86fa0133" class="cell" data-execution_count="22">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the value tensor into per-level chunks based on spatial shapes</span></span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>value_list <span class="op">=</span> value.split([h <span class="op">*</span> w <span class="cf">for</span> h, w <span class="kw">in</span> spatial_shapes_list], dim<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>batch_size, _, num_heads, hidden_dim <span class="op">=</span> value.shape</span>
@@ -1087,7 +1087,7 @@ Value at level 2 torch.Size([32, 32, 34, 34])
 Value at level 3 torch.Size([32, 32, 17, 17])</code></pre>
 </div>
 </div>
-<div id="537666fc" class="cell" data-execution_count="45">
+<div id="537666fc" class="cell" data-execution_count="23">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i,f <span class="kw">in</span> <span class="bu">enumerate</span>(sampling_value_list):</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Sampling points from each layer </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>f<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -1097,7 +1097,7 @@ Sampling points from each layer 2 torch.Size([32, 32, 300, 4])
 Sampling points from each layer 3 torch.Size([32, 32, 300, 4])</code></pre>
 </div>
 </div>
-<div id="bbfa786c" class="cell" data-execution_count="46">
+<div id="bbfa786c" class="cell" data-execution_count="24">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> torch.stack(sampling_value_list, dim<span class="op">=-</span><span class="dv">2</span>)</span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Stacked value matrix shape before flattening = </span><span class="sc">{</span>final_key_matrix<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>final_key_matrix <span class="op">=</span> final_key_matrix.flatten(<span class="op">-</span><span class="dv">2</span>)</span>
@@ -1107,16 +1107,16 @@ Sampling points from each layer 3 torch.Size([32, 32, 300, 4])</code></pre>
 Stacked value matrix shape after flattening = torch.Size([32, 32, 300, 16])</code></pre>
 </div>
 </div>
-<div id="4ef2f515" class="cell" data-execution_count="47">
+<div id="4ef2f515" class="cell" data-execution_count="25">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>attention_weights <span class="op">=</span> attention_weights.transpose(<span class="dv">1</span>, <span class="dv">2</span>).reshape(</span>
 <span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>            batch_size <span class="op">*</span> num_heads, <span class="dv">1</span>, num_queries, num_levels <span class="op">*</span> n_points</span>
 <span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>        )</span>
 <span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>attention_weights.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="47">
+<div class="cell-output cell-output-display" data-execution_count="25">
 <pre><code>torch.Size([32, 1, 300, 16])</code></pre>
 </div>
 </div>
-<div id="cac02ec2" class="cell" data-execution_count="48">
+<div id="cac02ec2" class="cell" data-execution_count="26">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> final_key_matrix<span class="op">*</span>attention_weights</span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Output after attention </span><span class="sc">{</span>output<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> output.<span class="bu">sum</span>(dim<span class="op">=-</span><span class="dv">1</span>)</span>
@@ -1130,13 +1130,13 @@ Final output after summation torch.Size([32, 32, 300])
  Output reshaped --&gt; torch.Size([4, 300, 256])</code></pre>
 </div>
 </div>
-<div id="47091739" class="cell" data-execution_count="49">
+<div id="47091739" class="cell" data-execution_count="27">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="49">
+<div class="cell-output cell-output-display" data-execution_count="27">
 <pre><code>torch.Size([4, 300, 256])</code></pre>
 </div>
 </div>
-<div id="7f35de42" class="cell" data-execution_count="50">
+<div id="7f35de42" class="cell" data-execution_count="28">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> nn.functional.dropout(output,p<span class="op">=</span><span class="fl">0.1</span>)</span>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> second_residual <span class="op">+</span> hidden_states</span>
 <span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm2(hidden_states)</span>
@@ -1148,10 +1148,10 @@ Final output after summation torch.Size([32, 32, 300])
 <span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> hidden_states <span class="op">+</span> residual</span>
 <span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>hidden_states <span class="op">=</span> layer_norm3(hidden_states)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="dabeac69" class="cell" data-execution_count="51">
+<div id="dabeac69" class="cell" data-execution_count="29">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>encoder_output <span class="op">=</span> hidden_states.clone()</span>
 <span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>encoder_output.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="51">
+<div class="cell-output cell-output-display" data-execution_count="29">
 <pre><code>torch.Size([4, 300, 256])</code></pre>
 </div>
 </div>
@@ -1172,7 +1172,7 @@ A small feed-forward network predicts four values: offsets for ((x, y, w, h)) in
 </ul></li>
 </ol>
 <p>This design stabilizes training because the network learns relative offsets in an unconstrained space rather than directly regressing normalized coordinates, which accelerates convergence and improves accuracy.</p>
-<div id="2a9e8cfa" class="cell">
+<div id="2a9e8cfa" class="cell" data-execution_count="30">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is needed because  model predicts an offset in unconstrained space </span></span>
 <span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="co"># By applying inverse_sigmoid(reference_points), we map the reference points from [0, 1] to unconstrained space,</span></span>
 <span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a><span class="co"># which is  the same space as the predicted offset.</span></span>
@@ -1200,7 +1200,7 @@ A small feed-forward network predicts four values: offsets for ((x, y, w, h)) in
 Final pred boxes head shape torch.Size([4, 300, 4]) </code></pre>
 </div>
 </div>
-<div id="471f3a4d" class="cell" data-execution_count="54">
+<div id="471f3a4d" class="cell" data-execution_count="31">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Losses are similart to DETR, only difference is Deformable detr uses focal loss for  classification and for pred boxes,</span></span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="co"># it uses the same loss like DETR where the losses are a combination of l1 loss and Generalized IOU loss</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -1392,8 +1392,8 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 </ul>
 <hr>
 </section>
-<section id="side-by-side-summary-dominant-terms" class="level4">
-<h4 class="anchored" data-anchor-id="side-by-side-summary-dominant-terms">4) Side-by-side Summary (Dominant Terms)</h4>
+<section id="comparison-of-the-above-three" class="level4">
+<h4 class="anchored" data-anchor-id="comparison-of-the-above-three">4) Comparison of the above three</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 14%">
@@ -1444,8 +1444,8 @@ Use per-query samples <span class="math inline">\(\rightarrow\)</span> <span cla
 </table>
 <hr>
 </section>
-<section id="practical-takeaways" class="level4">
-<h4 class="anchored" data-anchor-id="practical-takeaways">5) Practical Takeaways</h4>
+<section id="how-deformable-detr-is-better" class="level4">
+<h4 class="anchored" data-anchor-id="how-deformable-detr-is-better">5) How Deformable Detr is Better</h4>
 <ul>
 <li><strong>Encoder:</strong> dense self-attention is quadratic in spatial tokens; deformable makes it <strong>linear</strong> in the total number of tokens across scales (<span class="math inline">\(S\)</span>).</li>
 <li><strong>Decoder cross-attention:</strong> deformable cost depends on <span class="math inline">\((L K)\)</span> (small, fixed hyperparameters), not on image size, so it scales with the number of queries (<span class="math inline">\(N\)</span>) and channel dimension (<span class="math inline">\(C\)</span>), <strong>not</strong> with <span class="math inline">\(H, W\)</span>.</li>
