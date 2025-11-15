@@ -392,7 +392,7 @@ window.Quarto = {
   <li><a href="#splat" id="toc-splat" class="nav-link" data-scroll-target="#splat">Splat</a></li>
   <li><a href="#bevencodeshoot" id="toc-bevencodeshoot" class="nav-link" data-scroll-target="#bevencodeshoot">BevEncode/shoot</a></li>
   <li><a href="#loss" id="toc-loss" class="nav-link" data-scroll-target="#loss">Loss</a></li>
-  <li><a href="#gradient-flow-insight-through-voxel-pooling" id="toc-gradient-flow-insight-through-voxel-pooling" class="nav-link" data-scroll-target="#gradient-flow-insight-through-voxel-pooling">Gradient Flow Insight through voxel pooling</a>
+  <li><a href="#gradient-flow-some-insights" id="toc-gradient-flow-some-insights" class="nav-link" data-scroll-target="#gradient-flow-some-insights">Gradient Flow Some Insights</a>
   <ul class="collapse">
   <li><a href="#how-gradients-flow-through-voxel-pooling" id="toc-how-gradients-flow-through-voxel-pooling" class="nav-link" data-scroll-target="#how-gradients-flow-through-voxel-pooling"><strong>How Gradients Flow Through Voxel Pooling</strong></a></li>
   <li><a href="#how-depth-probabilities-interact" id="toc-how-depth-probabilities-interact" class="nav-link" data-scroll-target="#how-depth-probabilities-interact"><strong>How Depth Probabilities Interact</strong></a></li>
@@ -1198,8 +1198,8 @@ lifted features permuted to per-camera: torch.Size([2, 6, 41, 8, 22, 64])</code>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> loss_fn(preds.squeeze(<span class="dv">1</span>), target_binary_image)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="gradient-flow-insight-through-voxel-pooling" class="level2">
-<h2 class="anchored" data-anchor-id="gradient-flow-insight-through-voxel-pooling">Gradient Flow Insight through voxel pooling</h2>
+<section id="gradient-flow-some-insights" class="level2">
+<h2 class="anchored" data-anchor-id="gradient-flow-some-insights">Gradient Flow Some Insights</h2>
 <section id="how-gradients-flow-through-voxel-pooling" class="level3">
 <h3 class="anchored" data-anchor-id="how-gradients-flow-through-voxel-pooling"><strong>How Gradients Flow Through Voxel Pooling</strong></h3>
 <p>In Lift-Splat-Shoot, voxel pooling is a <strong>sum operation</strong> over features projected into a voxel from different camera rays.</p>
