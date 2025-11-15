@@ -193,7 +193,7 @@
     "href": "posts/2025-11-15-LiftSplatShoot.html",
     "title": "Lift Splat Shoot Explained",
     "section": "",
-    "text": "Lift-Splat-Shoot is one of the pioneering models that demonstrated how to effectively use multi-camera inputs—such as the six-camera setup in the nuScenes dataset—along with their intrinsic and extrinsic calibration parameters to build an end-to-end differentiable perception system. By carefully designing the architecture to maintain key geometric symmetries, the model enables direct learning from downstream planning feedback, allowing the perception module to improve in a data-driven manner."
+    "text": "Lift-Splat-Shoot is one of the pioneering models that demonstrated how to effectively use multi-camera inputs—a common setup in autonomous vehicles (for example, the six-camera rig in the nuScenes dataset)—along with their corresponding intrinsic and extrinsic calibration parameters to build an end-to-end differentiable perception system. By carefully designing the architecture to preserve key geometric symmetries, the model enables direct learning from downstream planning feedback, allowing the perception module to improve in a data-driven manner."
   },
   {
     "objectID": "posts/2025-11-15-LiftSplatShoot.html#creating-the-dataset",
