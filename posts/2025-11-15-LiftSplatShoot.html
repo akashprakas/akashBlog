@@ -961,7 +961,13 @@ fused features shape: torch.Size([12, 512, 8, 22])</code></pre>
 </section>
 <section id="lifting-image-features-to-grid" class="level2">
 <h2 class="anchored" data-anchor-id="lifting-image-features-to-grid">Lifting image features to grid</h2>
-<p>Now we have extracted the feature from the effiecient backbone , now we have a <strong>depth head</strong> and <strong>context feature head</strong> , the idea is to have a <strong>softattention over depth</strong> and distribute image feature across multiple depth hypotheses and then the network learn how much weight to assign to each depth bin per feature from the loss. * For each pixel, the network predicts a <strong>categorical distribution over depth bins</strong> (via <code>softmax</code>). * Instead of choosing a single depth (hard assignment), the pixel’s feature vector is <strong>weighted by these probabilities</strong> and spread across all depth bins. * This means the network attends to multiple possible depths proportionally to their predicted likelihood. * Thus a volume of C*D , will be created for each feature</p>
+<p>Now we have extracted the feature from the effiecient backbone , now we have a <strong>depth head</strong> and <strong>context feature head</strong> , the idea is to have a <strong>softattention over depth</strong> and distribute image feature across multiple depth hypotheses and then the network learn how much weight to assign to each depth bin per feature from the loss.</p>
+<ul>
+<li>For each pixel, the network predicts a <strong>categorical distribution over depth bins</strong> (via <code>softmax</code>).</li>
+<li>Instead of choosing a single depth (hard assignment), the pixel’s feature vector is <strong>weighted by these probabilities</strong> and spread across all depth bins.</li>
+<li>This means the network attends to multiple possible depths proportionally to their predicted likelihood.</li>
+<li>Thus a volume of C*D , will be created for each feature</li>
+</ul>
 <p><code>Benefits</code></p>
 <ul>
 <li>Depth from a single image is ambiguous. Hard assignment (one depth per pixel) would propagate errors.</li>
@@ -1070,6 +1076,7 @@ lifted features permuted to per-camera: torch.Size([2, 6, 41, 8, 22, 64])</code>
 <li><p><strong>BEV Grid</strong>: place summed features into a structured grid</p></li>
 </ul>
 <p>This pooling is <strong>parameter-free</strong>, but its structure determines how gradients flow back to image features and depth probabilities.</p>
+<p>NOTE: This voxel pooling is a very costly operations and if your camera intrinsics and transforms do not change this can be converted to a one time operation, as shown by papers like BevFusion.</p>
 <div id="682f5cf3" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>lifted_features_flattened <span class="op">=</span> lifted_features.reshape(<span class="op">-</span><span class="dv">1</span>, number_of_conv_features)  <span class="co"># [(B * num_cams * D * H/16 * W/16), C]</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
