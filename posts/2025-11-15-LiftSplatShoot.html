@@ -450,7 +450,7 @@ window.Quarto = {
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> nuscenes.utils.data_classes <span class="im">import</span> Box</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> nuscenes.nuscenes <span class="im">import</span> NuScenes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="96990de2" class="cell" data-execution_count="4">
+<div id="96990de2" class="cell" data-execution_count="20">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mean <span class="op">=</span> [<span class="fl">0.485</span>, <span class="fl">0.456</span>, <span class="fl">0.406</span>]</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>std  <span class="op">=</span> [<span class="fl">0.229</span>, <span class="fl">0.224</span>, <span class="fl">0.225</span>]</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -470,7 +470,7 @@ window.Quarto = {
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>cams <span class="op">=</span> [<span class="st">'CAM_FRONT_LEFT'</span>,<span class="st">'CAM_FRONT'</span>, <span class="st">'CAM_FRONT_RIGHT'</span>, <span class="st">'CAM_BACK_LEFT'</span>, <span class="st">'CAM_BACK'</span>, <span class="st">'CAM_BACK_RIGHT'</span>]</span>
 <span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the image size the input CNN expects , so basically we will resize the images to this size</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the image size the input CNN expects in the paper, so basically we will resize the images to this size, this has significance, since all transforms need to be cached accordingly for later projecting to Ego coordinates.</span></span>
 <span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>input_image_height <span class="op">=</span> <span class="dv">128</span></span>
 <span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>input_image_width <span class="op">=</span> <span class="dv">352</span></span>
 <span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
@@ -488,7 +488,7 @@ window.Quarto = {
 <li><strong>Augmentation transforms</strong> (This is not directly from the nuscenes dataset)</li>
 </ul>
 <p>A crucial detail when applying augmentations such as resizing , cropping or rotation is that the camera intrinsics and extrinsics are defined for the original image dimensions. Therefore, any transformations applied to the images must be cached so that their inverse transforms can be used later during projection to the ego vehicle coordinate frame. This ensures that the image features are correctly aligned with the camera parameters (K, R, and T) and that the spatial consistency of the pipeline is preserved.</p>
-<div id="3a17f471" class="cell" data-execution_count="6">
+<div id="3a17f471" class="cell">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">NOTE</span><span class="co">: If you dont have the nuscenes dataset, you can skip running this code block</span></span>
@@ -496,121 +496,122 @@ window.Quarto = {
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>nusc <span class="op">=</span> NuScenes(version<span class="op">=</span><span class="st">'v1.0-mini'</span>, dataroot<span class="op">=</span><span class="st">'/home/ap/dataset/nuscenes'</span>, verbose<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>last_sample_token <span class="op">=</span> <span class="st">'63c24b51feb94f14bec29022dae4975d'</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>second_last_sample_token  <span class="op">=</span> <span class="st">'de9432d4fc7a4e5a985e2bc628eb614c'</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>last_sample <span class="op">=</span> nusc.get(<span class="st">'sample'</span>, last_sample_token)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>second_last_sample <span class="op">=</span> nusc.get(<span class="st">'sample'</span>, second_last_sample_token)</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>samples <span class="op">=</span> [second_last_sample, last_sample]</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>images_per_batch <span class="op">=</span> []</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>rotations_per_batch <span class="op">=</span> []</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>translations_per_batch <span class="op">=</span> []</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>intrinsics_per_batch <span class="op">=</span> []</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>resize_transforms_per_batch <span class="op">=</span> []</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>crop_transforms_per_batch <span class="op">=</span> []</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>gt_binary_images_per_batch <span class="op">=</span> []</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> my_sample <span class="kw">in</span> samples:</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    images <span class="op">=</span> []</span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    rotations <span class="op">=</span> []</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    translations <span class="op">=</span> []</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    intrinsics <span class="op">=</span> []</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    resize_transforms <span class="op">=</span> []</span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    crop_transforms <span class="op">=</span> []</span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> cam <span class="kw">in</span> cams:</span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        cam_data <span class="op">=</span> nusc.get(<span class="st">'sample_data'</span>, my_sample[<span class="st">'data'</span>][cam])</span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        image_name <span class="op">=</span> os.path.join(nusc.dataroot, cam_data[<span class="st">'filename'</span>])</span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        img  <span class="op">=</span> Image.<span class="bu">open</span>(image_name)</span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Image from {cam}: size {img.size}")</span></span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        calibrated_sensor_token <span class="op">=</span> cam_data[<span class="st">'calibrated_sensor_token'</span>]</span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        calibrated_sensor <span class="op">=</span> nusc.get(<span class="st">'calibrated_sensor'</span>, calibrated_sensor_token)</span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        rotation <span class="op">=</span> torch.tensor(Quaternion(calibrated_sensor[<span class="st">'rotation'</span>]).rotation_matrix)</span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        translation <span class="op">=</span> torch.tensor(calibrated_sensor[<span class="st">'translation'</span>])</span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        camera_intrinsic <span class="op">=</span> torch.tensor(calibrated_sensor[<span class="st">'camera_intrinsic'</span>])</span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        H,W <span class="op">=</span> img.size[<span class="dv">1</span>], img.size[<span class="dv">0</span>]</span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Rotation:\n{rotation}\nTranslation:\n{translation}\nIntrinsics:\n{camera_intrinsic}\nImage Height: {H}, Width: {W}\n")</span></span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print("=============================================================================================================================================")</span></span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>        resize <span class="op">=</span> <span class="bu">max</span>(input_image_height <span class="op">/</span> H, input_image_width <span class="op">/</span> W) <span class="co">#this is to maintain aspect ratio</span></span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>        resize_dims <span class="op">=</span> (<span class="bu">int</span>(W <span class="op">*</span> resize), <span class="bu">int</span>(H <span class="op">*</span> resize))</span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Resize dimensions to fit feature map: {resize_dims}\n\n")</span></span>
-<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        newW, newH <span class="op">=</span> resize_dims</span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>        <span class="co"># cropping from the top since the top usually has more irrelevant info (sky) </span></span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>        <span class="co"># in the orginal implementation, cropping is done from bottom + top randomly with more weight on top</span></span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        crop_h <span class="op">=</span> newH <span class="op">-</span> input_image_height</span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>        crop_w <span class="op">=</span> newW <span class="op">-</span> input_image_width</span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>        crop <span class="op">=</span> (crop_w, crop_h, crop_w <span class="op">+</span> input_image_width, crop_h <span class="op">+</span> input_image_height)</span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Crop box to get feature map size: {crop}\n")</span></span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>        img <span class="op">=</span> img.resize(resize_dims).crop(crop)</span>
-<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>        <span class="co">#post homography transformations,</span></span>
-<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>        <span class="co"># we can consider resize and crop as two homography transformations and need to make matrices for them, because we want to undo later during projection because the intrinscs</span></span>
-<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        <span class="co"># and extrinsics are for original image size and this needs to be taken care</span></span>
-<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>        <span class="co"># ideally these two should be two dimensional but now making it 3 work numerically well so</span></span>
-<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        <span class="co"># for resize transform for z we multiply by 1, which is a no change and for crop_transform for z we subtract 0 which is also a no change. </span></span>
-<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>        resize_transform <span class="op">=</span> torch.diag(torch.tensor([resize,resize, <span class="fl">1.0</span>])) </span>
-<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        crop_transform   <span class="op">=</span> <span class="op">-</span>torch.tensor([[crop_w,crop_h,<span class="fl">0.0</span>]])</span>
-<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Resize transform:\n{resize_transform}")</span></span>
-<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Crop transform:\n{crop_transform}")</span></span>
-<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>        images.append(normalize_img(img))</span>
-<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>        rotations.append(rotation)</span>
-<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>        translations.append(translation)</span>
-<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>        intrinsics.append(camera_intrinsic)</span>
-<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>        resize_transforms.append(resize_transform)</span>
-<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>        crop_transforms.append(crop_transform)</span>
-<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>    images_per_batch.append(torch.stack(images))</span>
-<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    rotations_per_batch.append(torch.stack(rotations))  </span>
-<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    translations_per_batch.append(torch.stack(translations))</span>
-<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>    intrinsics_per_batch.append(torch.stack(intrinsics))</span>
-<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    resize_transforms_per_batch.append(torch.stack(resize_transforms))</span>
-<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>    crop_transforms_per_batch.append(torch.stack(crop_transforms))</span>
-<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># I am just using a batch of 2 samples for tutorial purpose</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>last_sample_token <span class="op">=</span> <span class="st">'63c24b51feb94f14bec29022dae4975d'</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>second_last_sample_token  <span class="op">=</span> <span class="st">'de9432d4fc7a4e5a985e2bc628eb614c'</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>last_sample <span class="op">=</span> nusc.get(<span class="st">'sample'</span>, last_sample_token)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>second_last_sample <span class="op">=</span> nusc.get(<span class="st">'sample'</span>, second_last_sample_token)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>samples <span class="op">=</span> [second_last_sample, last_sample]</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>images_per_batch <span class="op">=</span> []</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>rotations_per_batch <span class="op">=</span> []</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>translations_per_batch <span class="op">=</span> []</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>intrinsics_per_batch <span class="op">=</span> []</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>resize_transforms_per_batch <span class="op">=</span> []</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>crop_transforms_per_batch <span class="op">=</span> []</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>gt_binary_images_per_batch <span class="op">=</span> []</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> my_sample <span class="kw">in</span> samples:</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    images <span class="op">=</span> []</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    rotations <span class="op">=</span> []</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    translations <span class="op">=</span> []</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    intrinsics <span class="op">=</span> []</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    resize_transforms <span class="op">=</span> []</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    crop_transforms <span class="op">=</span> []</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> cam <span class="kw">in</span> cams:</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        cam_data <span class="op">=</span> nusc.get(<span class="st">'sample_data'</span>, my_sample[<span class="st">'data'</span>][cam])</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        image_name <span class="op">=</span> os.path.join(nusc.dataroot, cam_data[<span class="st">'filename'</span>])</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        img  <span class="op">=</span> Image.<span class="bu">open</span>(image_name)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Image from {cam}: size {img.size}")</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        calibrated_sensor_token <span class="op">=</span> cam_data[<span class="st">'calibrated_sensor_token'</span>]</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        calibrated_sensor <span class="op">=</span> nusc.get(<span class="st">'calibrated_sensor'</span>, calibrated_sensor_token)</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        rotation <span class="op">=</span> torch.tensor(Quaternion(calibrated_sensor[<span class="st">'rotation'</span>]).rotation_matrix)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        translation <span class="op">=</span> torch.tensor(calibrated_sensor[<span class="st">'translation'</span>])</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        camera_intrinsic <span class="op">=</span> torch.tensor(calibrated_sensor[<span class="st">'camera_intrinsic'</span>])</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        H,W <span class="op">=</span> img.size[<span class="dv">1</span>], img.size[<span class="dv">0</span>]</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Rotation:\n{rotation}\nTranslation:\n{translation}\nIntrinsics:\n{camera_intrinsic}\nImage Height: {H}, Width: {W}\n")</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print("=============================================================================================================================================")</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>        resize <span class="op">=</span> <span class="bu">max</span>(input_image_height <span class="op">/</span> H, input_image_width <span class="op">/</span> W) <span class="co">#this is to maintain aspect ratio</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        resize_dims <span class="op">=</span> (<span class="bu">int</span>(W <span class="op">*</span> resize), <span class="bu">int</span>(H <span class="op">*</span> resize))</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Resize dimensions to fit feature map: {resize_dims}\n\n")</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>        newW, newH <span class="op">=</span> resize_dims</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>        <span class="co"># cropping from the top since the top usually has more irrelevant info (sky) </span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        <span class="co"># in the orginal implementation, cropping is done from bottom + top randomly with more weight on top</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>        crop_h <span class="op">=</span> newH <span class="op">-</span> input_image_height</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>        crop_w <span class="op">=</span> newW <span class="op">-</span> input_image_width</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>        crop <span class="op">=</span> (crop_w, crop_h, crop_w <span class="op">+</span> input_image_width, crop_h <span class="op">+</span> input_image_height)</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Crop box to get feature map size: {crop}\n")</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>        img <span class="op">=</span> img.resize(resize_dims).crop(crop)</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>        <span class="co">#post homography transformations,</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        <span class="co"># we can consider resize and crop as two homography transformations and need to make matrices for them, because we want to undo later during projection because the intrinscs</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>        <span class="co"># and extrinsics are for original image size and this needs to be taken care</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        <span class="co"># ideally these two should be two dimensional but now making it 3 work numerically well so</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>        <span class="co"># for resize transform for z we multiply by 1, which is a no change and for crop_transform for z we subtract 0 which is also a no change. </span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        resize_transform <span class="op">=</span> torch.diag(torch.tensor([resize,resize, <span class="fl">1.0</span>])) </span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>        crop_transform   <span class="op">=</span> <span class="op">-</span>torch.tensor([[crop_w,crop_h,<span class="fl">0.0</span>]])</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Resize transform:\n{resize_transform}")</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Crop transform:\n{crop_transform}")</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>        images.append(normalize_img(img))</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>        rotations.append(rotation)</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>        translations.append(translation)</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>        intrinsics.append(camera_intrinsic)</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>        resize_transforms.append(resize_transform)</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>        crop_transforms.append(crop_transform)</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    images_per_batch.append(torch.stack(images))</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    rotations_per_batch.append(torch.stack(rotations))  </span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>    translations_per_batch.append(torch.stack(translations))</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    intrinsics_per_batch.append(torch.stack(intrinsics))</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>    resize_transforms_per_batch.append(torch.stack(resize_transforms))</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    crop_transforms_per_batch.append(torch.stack(crop_transforms))</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>    sd_lidar <span class="op">=</span> nusc.get(<span class="st">'sample_data'</span>, my_sample[<span class="st">'data'</span>][<span class="st">'LIDAR_TOP'</span>])</span>
-<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>    <span class="co"># get ego pose to transform from global to ego vehicle frame</span></span>
-<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    egopose <span class="op">=</span> nusc.get(<span class="st">'ego_pose'</span>, sd_lidar[<span class="st">'ego_pose_token'</span>])</span>
-<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    trans <span class="op">=</span> <span class="op">-</span>np.array(egopose[<span class="st">'translation'</span>])</span>
-<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>    rot <span class="op">=</span> Quaternion(egopose[<span class="st">'rotation'</span>]).inverse</span>
-<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>   </span>
-<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>    target_binary_image <span class="op">=</span> np.zeros((nx[<span class="dv">0</span>], nx[<span class="dv">1</span>]))</span>
-<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> tok <span class="kw">in</span> my_sample[<span class="st">'anns'</span>]:</span>
-<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>        inst <span class="op">=</span> nusc.get(<span class="st">'sample_annotation'</span>, tok)</span>
-<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>        <span class="co"># add category for lyft</span></span>
-<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> inst[<span class="st">'category_name'</span>].split(<span class="st">'.'</span>)[<span class="dv">0</span>] <span class="op">==</span> <span class="st">'vehicle'</span>:</span>
-<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
-<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>        box <span class="op">=</span> Box(inst[<span class="st">'translation'</span>], inst[<span class="st">'size'</span>], Quaternion(inst[<span class="st">'rotation'</span>]))</span>
-<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>        <span class="co"># bring box to ego frame</span></span>
-<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        box.translate(trans)</span>
-<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>        box.rotate(rot)</span>
-<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>        pts <span class="op">=</span> box.bottom_corners()[:<span class="dv">2</span>].T</span>
-<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>        <span class="co"># bring points to grid coords</span></span>
-<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>        pts <span class="op">=</span> np.<span class="bu">round</span>(</span>
-<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>            (pts <span class="op">-</span> bx[:<span class="dv">2</span>] <span class="op">+</span> dx[:<span class="dv">2</span>]<span class="op">/</span><span class="fl">2.</span>) <span class="op">/</span> dx[:<span class="dv">2</span>]</span>
-<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>            ).astype(np.int32)</span>
-<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>        pts[:, [<span class="dv">1</span>, <span class="dv">0</span>]] <span class="op">=</span> pts[:, [<span class="dv">0</span>, <span class="dv">1</span>]]</span>
-<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>        cv2.fillPoly(target_binary_image, [pts], <span class="fl">1.0</span>)</span>
-<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>    gt_binary_images_per_batch.append(torch.tensor(target_binary_image))</span>
-<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>    sd_lidar <span class="op">=</span> nusc.get(<span class="st">'sample_data'</span>, my_sample[<span class="st">'data'</span>][<span class="st">'LIDAR_TOP'</span>])</span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    <span class="co"># get ego pose to transform from global to ego vehicle frame</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    egopose <span class="op">=</span> nusc.get(<span class="st">'ego_pose'</span>, sd_lidar[<span class="st">'ego_pose_token'</span>])</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>    trans <span class="op">=</span> <span class="op">-</span>np.array(egopose[<span class="st">'translation'</span>])</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>    rot <span class="op">=</span> Quaternion(egopose[<span class="st">'rotation'</span>]).inverse</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>   </span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>    target_binary_image <span class="op">=</span> np.zeros((nx[<span class="dv">0</span>], nx[<span class="dv">1</span>]))</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> tok <span class="kw">in</span> my_sample[<span class="st">'anns'</span>]:</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>        inst <span class="op">=</span> nusc.get(<span class="st">'sample_annotation'</span>, tok)</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>        <span class="co"># add category for lyft</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> inst[<span class="st">'category_name'</span>].split(<span class="st">'.'</span>)[<span class="dv">0</span>] <span class="op">==</span> <span class="st">'vehicle'</span>:</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>        box <span class="op">=</span> Box(inst[<span class="st">'translation'</span>], inst[<span class="st">'size'</span>], Quaternion(inst[<span class="st">'rotation'</span>]))</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        <span class="co"># bring box to ego frame</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>        box.translate(trans)</span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>        box.rotate(rot)</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>        pts <span class="op">=</span> box.bottom_corners()[:<span class="dv">2</span>].T</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>        <span class="co"># bring points to grid coords</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>        pts <span class="op">=</span> np.<span class="bu">round</span>(</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>            (pts <span class="op">-</span> bx[:<span class="dv">2</span>] <span class="op">+</span> dx[:<span class="dv">2</span>]<span class="op">/</span><span class="fl">2.</span>) <span class="op">/</span> dx[:<span class="dv">2</span>]</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>            ).astype(np.int32)</span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>        pts[:, [<span class="dv">1</span>, <span class="dv">0</span>]] <span class="op">=</span> pts[:, [<span class="dv">0</span>, <span class="dv">1</span>]]</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>        cv2.fillPoly(target_binary_image, [pts], <span class="fl">1.0</span>)</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>    gt_binary_images_per_batch.append(torch.tensor(target_binary_image))</span>
 <span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a><span class="co">#Saving the data for  the data for tutorial usage</span></span>
-<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {<span class="st">"images"</span>:torch.stack(images_per_batch),  <span class="co"># (B, num_cams, 3, H, W)</span></span>
-<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rotations"</span>:torch.stack(rotations_per_batch),  <span class="co"># (B, num_cams, 3, 3)</span></span>
-<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>        <span class="st">"translations"</span>:torch.stack(translations_per_batch),  <span class="co"># (B, num_cams, 3)</span></span>
-<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>        <span class="st">"intrinsics"</span>:torch.stack(intrinsics_per_batch),  <span class="co"># (B, num_cams, 3, 3),</span></span>
-<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>        <span class="st">"resize_transforms"</span>:torch.stack(resize_transforms_per_batch),  <span class="co"># (B, num_cams, 3, 3)</span></span>
-<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>        <span class="st">"crop_transforms"</span>:torch.stack(crop_transforms_per_batch),  <span class="co"># (B, num_cams, 1, 3)</span></span>
-<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>        <span class="st">"gt_binary_images"</span>:torch.stack(gt_binary_images_per_batch)  <span class="co"># (B, H, W)</span></span>
-<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a><span class="co">#torch.save(data,"nuscenes_mini_sample_data_batch.pt")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a><span class="co">#Saving the data for  the data for tutorial usage</span></span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {<span class="st">"images"</span>:torch.stack(images_per_batch),  <span class="co"># (B, num_cams, 3, H, W)</span></span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rotations"</span>:torch.stack(rotations_per_batch),  <span class="co"># (B, num_cams, 3, 3)</span></span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>        <span class="st">"translations"</span>:torch.stack(translations_per_batch),  <span class="co"># (B, num_cams, 3)</span></span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>        <span class="st">"intrinsics"</span>:torch.stack(intrinsics_per_batch),  <span class="co"># (B, num_cams, 3, 3),</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>        <span class="st">"resize_transforms"</span>:torch.stack(resize_transforms_per_batch),  <span class="co"># (B, num_cams, 3, 3)</span></span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>        <span class="st">"crop_transforms"</span>:torch.stack(crop_transforms_per_batch),  <span class="co"># (B, num_cams, 1, 3)</span></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>        <span class="st">"gt_binary_images"</span>:torch.stack(gt_binary_images_per_batch)  <span class="co"># (B, H, W)</span></span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a><span class="co">#torch.save(data,"nuscenes_mini_sample_data_batch.pt")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>======
