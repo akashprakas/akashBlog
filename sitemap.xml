@@ -2,34 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://akashprakas.github.io/akashBlog/posts/2020-12-19-hacking_fasterrcnn.html</loc>
-    <lastmod>2025-11-01T08:28:39.442Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2022-08-24-understanding the losses in centernet architecture.html</loc>
-    <lastmod>2025-11-01T08:28:39.442Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2020-09-20-pytorch_iou.html</loc>
-    <lastmod>2025-11-01T08:28:39.442Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/about.html</loc>
-    <lastmod>2025-11-05T07:53:27.090Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/index.html</loc>
-    <lastmod>2025-11-02T13:43:28.057Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2022-07-30-so what does mobile blocks save.html</loc>
-    <lastmod>2025-11-01T08:28:39.442Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2025-10-31-deformable_detr.html</loc>
-    <lastmod>2025-11-05T07:56:00.936Z</lastmod>
+    <lastmod>2025-10-30T20:55:46.721Z</lastmod>
   </url>
   <url>
     <loc>https://akashprakas.github.io/akashBlog/posts/2022-11-23-simpleonlinerealtimetracking.html</loc>
-    <lastmod>2025-11-01T08:28:39.442Z</lastmod>
+    <lastmod>2025-10-30T20:55:46.721Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2025-10-31-deformable_detr.html</loc>
+    <lastmod>2025-11-14T21:25:53.853Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-07-30-so what does mobile blocks save.html</loc>
+    <lastmod>2025-10-30T20:55:46.721Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/index.html</loc>
+    <lastmod>2025-11-02T14:44:01.780Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/about.html</loc>
+    <lastmod>2025-11-04T17:57:00.140Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2020-09-20-pytorch_iou.html</loc>
+    <lastmod>2025-10-30T20:55:46.720Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-08-24-understanding the losses in centernet architecture.html</loc>
+    <lastmod>2025-10-30T20:55:46.721Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2025-11-15-LiftSplatShoot.html</loc>
+    <lastmod>2025-11-15T10:18:11.254Z</lastmod>
   </url>
 </urlset>
