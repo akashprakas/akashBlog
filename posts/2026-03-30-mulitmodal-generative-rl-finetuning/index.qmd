@@ -1,45 +1,192 @@
 ---
-title: "When and Why Functional Anchoring Preserves Modes in Generative RL Fine-Tuning"
+title: "Preserve or Discover? Functional Anchors and Mutual Information in Generative RL Fine-Tuning "
 description: "Why reward-only RL collapses pretrained diffusion/flow policies to single modes, and how paired-noise anchoring plus mutual information resolves the tension between stability and discovery."
-author: "Akash"
-date: "2026-03-30"
-categories: [reinforcement-learning, diffusion-models, flow-matching, generative-policies]
+author: "Akash Prakash"
+date: "2026-10-11"
+categories: [reinforcement-learning, diffusion-models, flow-matching, multi-modal]
 toc: true
 ---
 
-::: {.callout-important}
-### Headline Finding
-In multimodal policy fine-tuning, standard task success ($\text{SR}$) can completely conceal behavioral collapse. Plain DSRL scores $\text{SR} = 1.000$, but collapses to a single mode ($\text{SR}_M = 0.250, \text{mcf} = 1/4$).
-:::
+## Core problem 
 
-## 1. The Core Tension: Stability vs. Mode Discovery
+Generative policies that use diffusion or flow for there action policy have the ability to represent different ways to solve a task,
+thereby having inherent multimodal behavior in them. When we do only BC and measure the entropy or modes we can see that the mulitmodality is presevered, but unfortunately when we do RL finetuning on them this often destroys the diversity and make the 
+policy converge to one goal.
 
-```{mermaid}
-flowchart LR
-    A[Pretrained Policy f₀] -->|DSRL / ReinFlow without anchor| B[Mode Collapse: 1/4 Modes]
-    A -->|Functional Anchor: Paired Noise| C[Mode Preservation: 4/4 Modes]
-    A -->|BMD: Mutual Information| D[Mode Discovery: Shifted Goals]
-    C & D --> E[BMD + Anchor: Robust Multimodal Generalization]
+![](fig0_hook.svg)
+
+This failure can be suprisingly easy to miss , in this i used a fourgoal env where the policy gets equal reward when reaching one of the four goal , what we observed was that teh when doing RL fine tuning on them the unconstrained policy reached a 100% success
+while sending every trajectory to one goal, so if we judge only by task reward the policy is perfect.But if we judge by the behaviors ie the different goals it reaches the policy have completely collapsed.
+
+We looked into two ways of doing this.
+- ** Functional anchoring ** , which discourages the fine tuned policy from changing the pretrained noise to action function too much.
+- **[Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies](https://behav-mod-dis.github.io/) ** An already existing work from Longhini etal ,
+which uses mutual information objective to  make different latent skills produce different trajectories.
+
+Main finding is that these mechanism solve different problem, and when combined works better than alone.
+
+> Functional anchoring preserves useful behaviors that are already present. Mutual information helps discover or reorganize behaviors when the old ones no longer solve the task.
+
+This distinction is important because it is directly tied to the positive results and failure cases as well.
+
+
+## A small environment that epxoses mode collapse
+
+The environment starts at the origin and contains four possible goals. Demonstrations reach four equally valid modes, so a BC policy can learn a multimodal distribution over trajectories.
+
+We then change the reward landscape during RL fine-tuning in two ways:
+
+1. **Compatible outward shift.** The goals move farther from the origin and rotate by only 7.9 degrees. The old behavioral modes are still useful, but they must be extended and adjusted slightly. We call this the “radius-shift” setting below for brevity, but it is not a mathematically pure radius change.
+2. **Rotation.** The goals rotate by 45 degrees. Each new goal lies between two old demonstration directions, so merely preserving the old modes is insufficient.
+
+These shifts create a useful controlled comparison:
+
+```text
+Outward + 7.9° shift → preserve and adapt existing modes
+45° rotation        → reorganize or discover modes
 ```
 
-## 2. Quantitative Results
+![The demonstration goals, the compatible outward shift, and the 45° rotation. Dashed circles mark the original success regions.](fig1_geometry.svg)
 
-| Method | Environment | Task Success ($\text{SR}$) | Balanced Success ($\text{SR}_M$) | Reliable Modes ($\text{mcf}$) | Entropy ($H_s / \log M$) |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| Plain DSRL | $g_2$ | 1.000 | 0.250 | 1.00 | 0.000 |
-| Full BMD | $g_2$ | 0.976 | 0.797 | 3.12 | 0.793 |
-| **BMD + Anchor** | $g_2$ | **0.9995** | **0.968** | **3.88** | **0.910** |
-| Plain DSRL | $g_5$ | 0.9995 | 0.250 | 1.00 | 0.000 |
-| **Functional Anchor** | $g_5$ | **0.993** | **0.993** | **4.00** | **0.978** |
+## Success rate is not enough
 
-## 3. The Functional Anchor Formulation
+Suppose all rollouts reach one goal and ignore the other three. Overall success is still 100%, even though the policy has retained only one quarter of the intended behavior. So i reuse the same metrics used in the Behavior mode Discovery paper.
 
-Given input noise $\varepsilon \sim \mathcal{N}(0, I)$ and pretrained generator $f_0(s, \varepsilon)$:
+- **SR:** overall task success.
+- **SR_M:** success averaged across the four modes rather than across episodes.
+- **Mode coverage:** the number of modes whose conditional success is at least 80%, with a minimum-attempt requirement.
+- **Successful-mode entropy:** how evenly successful trajectories are distributed among the modes.
+
+The minimum attempt rule matters since a mode visited once with one successful episode should not count as reliably solved. 
+
+
+Every final policy was evaluated for 1,024 episodes per training seed. These episodes improve the precision of evaluating one policy; the independent training seeds measure the variability of the learning algorithm.
+
+
+## Functional anchoring
+
+Let $f_0(s,\epsilon)$ be the pretrained policy's action for state $s$ and noise $\epsilon$, and let $f_\theta(s,\epsilon)$ be the fine-tuned policy. The functional anchor is
 
 $$
-\mathcal{L}_{\text{anchor}}(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \varepsilon \sim \mathcal{N}(0, I)} \left\| f_\theta(s, \varepsilon) - f_0(s, \varepsilon) \right\|^2
+\mathcal L_{\text{anchor}}
+=
+\mathbb E_{s,\epsilon}
+\left[
+\left\|f_\theta(s,\epsilon)-\operatorname{sg}\!\left(f_0(s,\epsilon)\right)\right\|^2
+\right].
 $$
 
-::: {.callout-note}
-Notice that $f_0$ receives the exact same noise realization $\varepsilon$ as $f_\theta$. This couples the latent noise coordinates to the original behavioral basins.
-:::
+The same noise is being passed through teh current and reference (detached ) policies. The idea being the loss preserves not only the overall action distribution but also the correspondence between regions of noise space and behaviors. On a high level if one noise region orginially produced an upward trajectory and other produced a leftward trajectory in the base frozen BC policy , the anchor makes it costly to remap both regions onto a  single direction during RL .
+
+![The paired-noise functional anchor: the same noise goes through the frozen BC flow and the trainable flow, and the squared difference of the two actions is added to the PPO loss.](fig2_anchor.svg)
+
+
+The coefficient $\lambda$ controls a familiar trade-off:
+
+```text
+weak anchor     → reward dominates; modes can collapse
+moderate anchor → adaptation with behavioral preservation
+strong anchor   → reference is preserved, but adaptation may be blocked
+```
+
+This is very much related to [Flow Q-Learning (FQL)](https://arxiv.org/abs/2502.02538). FQL trains a one-step actor to maximize an offline critic while matching the action produced by a pretrained flow for the same sampled noise. It also interprets this shared-noise squared error as an upper bound on the Wasserstein distance between their action distributions. The regularizer and its transport interpretation are therefore not new here.
+
+The role of regualizer is different in this study. FQL distills a multi-step flow into a separately deployed one-step policy using offline dataset states and Q-learning. We instead use the paired loss as a behavioral trust region during online PPO fine tuning , either by steering a forzen diffusion decoder as in the case of DSRL or by updating teh multi-step flow directly as in the case of reinflow. ReinFlow's paper contains a related paired-output objective; later we separately compare paired random noise with the released implementation's single input $x_0=0$.
+
+### The anchor has a working window
+
+So we did a 10 seeded sweep on the different lamba values for both DSRL and reinflow to see the effective region of lamba for both DSRL and Reinflow. Each policy was evaluated for 256 episodes. For a consistent comparison, we recomputed coverage from the saved attempt counts using the same floor,  a mode requires at least 26 attempts and at least 80% conditional success.
+
+![DSRL and ReinFlow exhibit the same preservation-adaptation trade-off at different anchor-coefficient scales.](fig4_lambda.svg)
+
+These are not universal values, the numerical value of lambda might depend on policy backend, action normalization , and the task. This to show that both under regularization and over regularization are real failure modes.
+
+
+## When the old modes remain useful
+
+### DSRL: preserving decoded behavior during noise steering
+
+Functional anchoring was first testesd with DSRL where the pretraiend diffusion policy remain frozen as n action decoder , while PPO trains a steering policy that transforms its input noise. The anchor compares the action decoded from the steered noise with the reference action decoded from the corresponding unsteered noise.
+
+The compatible outward shift is favorable to preservation , it might be because the pretrained BC trajectory distribution already point in useful direction and the new goal only needed to travel further and rotate slightly. Plain reward only DSRL adapted to new goal , but lost diversity and collapsed to one goal.
+
+
+For the final DSRL radius-shift study:
+
+| Method | SR | SR_M | Coverage | Successful-mode entropy |
+|---|---:|---:|---:|---:|
+| BMD | 0.993 | 0.943 | 3.80/4 | 0.911 |
+| Functional anchor | 0.956 | 0.954 | **4.00/4** | **0.951** |
+
+
+The average difference does not tell the whole story. BMD usually performed extremely well, but one seed dropped to two covered modes. Functional anchoring covered all four modes in every final seed. Across the two radius-shift batches, it achieved full coverage in 18/18 seeds, compared with 14/18 for BMD.
+
+
+### ReinFlow: separating adaptation from diversity
+
+Another experiment was conducted with reinflow to see the working of functional anchor with an flow based PPO fine tuning. Five different experiments were done
+
+- freezing the policy;
+- retaining stochasticity through a trainable noise head;
+- unconstrained reward optimization;
+- anchoring only the flow output at $x_0=0$;
+- anchoring outputs over randomly sampled, shared noise.
+
+The final results were:
+
+| ReinFlow variant | λ | SR | SR_M | Floored coverage | Successful-mode entropy |
+|---|---:|---:|---:|---:|---:|
+| Frozen | — | 0.567 | 0.556 | 0/4 | 0.970 |
+| Noise-only | — | 0.526 | 0.515 | 0/4 | 0.968 |
+| Plain RL | — | 1.000 | 0.281 | 1.00/4 | 0.001 |
+| Upstream anchor, $x_0=0$ | 0.01 | 1.000 | 0.906 | 2.25/4 | 0.571 |
+| Functional paired-noise anchor | 0.03 | **1.000** | **1.000** | **4.00/4** | **0.955** |
+
+Here fully frozen means  both the pretained mean velocity field and its exploration noise head network are held fixed. In noise head only control, the pretrained velocity field network remain frozen, while PPO updates the smaller head that predicts the transition std_dev $\sigma(s,t)$. This can change hwo much noise is injected at each flow step, but not the mean direction. Final one trains both .
+
+
+Each control fails in a different way:
+
+- A fully frozen actor preserves diverse visitation but cannot adapt to the shifted task.
+- Updating only the noise head changes stochasticity but still cannot move the mean behavior far enough to solve the shifted task reliably.
+- Plain RL solves the task but collapses onto one mode.
+- The single-point anchor helps, but constraining $x_0=0$ might not help to in understanding what the flow does over the reset of the noise space.
+- The paired-noise anchor constrains the sampled noise-to-action function and preserves every mode in every seed.
+
+The frozen control also shows that the functional result is not simply obtained by refusing to learn. The frozen policy remained diverse but under reached the shifted goals, whereas the functionally anchored policy adapted and succeeded. So these suggest functional anchor helps in retaining the base BC policy behavioral structure and mode distributions.
+
+## How preservation degrades with rotation
+
+Now we moved to the rotated test case where the the goal that the BC policies are pretrained are shifted and then we do RL on that to see if the new policy can find the shifted goals. What was found was that the in case of Reinflow the multimodality preserving benefits gets lost and get collapsed to one mode when the rotation angle reach 45 degrees. 
+
+| Goal rotation | ReinFlow functional anchor, λ=0.03 | Plain ReinFlow |
+|---:|---:|---:|
+| 0° | 4.00/4 | 1.00/4 |
+| 7.9° | 3.67/4 | 1.00/4 |
+| 11.25° | 4.00/4 | 1.00/4 |
+| 22.5° | 2.33/4 | 1.00/4 |
+| 30° | 1.00/4 | 1.00/4 |
+| 45° | 1.00/4 | 1.00/4 |
+
+![Coverage of the new rotated goals and mode-balanced success for plain ReinFlow and functional anchoring. The anchor's advantage disappears as rotation increases.](fig3_rotation.svg)
+
+
+For small rotations , anchoring allows the policy to adapt while retaining nearly all four successful modes. Its advantage then shrinks and solve only one goal for Reinflow , which is similar to what plain reinflow do. The anchor therefore does **not** preserve successful multimodality under the large rotation.
+
+
+Incase of DSRL at 45 degrees, plain DSRL reaches one goal with perfect overall success, whereas DSRL with the functional anchor covers no goal reliably. In the ReinFlow plain and functionally anchored policies both reach approximately perfect overall success but cover only one goal. BMD is the only tested method here that learns multiple successful rotated modes, reaching 3.10/4 coverage under the final DSRL protocol.
+
+| Method | SR | SR_M | Coverage | Successful-mode entropy |
+|---|---:|---:|---:|---:|
+| Plain DSRL | **1.000** | 0.250 | 1.00/4 | 0.000 |
+| Functional anchor only | 0.321 | 0.098 | 0.00/4 | 0.051 |
+| BMD | 0.971 | **0.799** | **3.10/4** | **0.762** |
+
+
+This gives the main boundary of the method:
+
+> A functional anchor can preserve and locally adapt behaviors represented by its reference, but it cannot be expected to manufacture a new behavioral decomposition.
+
+
+## Why BMD could have  discover rotated modes
+
