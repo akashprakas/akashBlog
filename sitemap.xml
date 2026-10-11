@@ -1,39 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://akashprakas.github.io/akashBlog/index.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2022-08-24-understanding the losses in centernet architecture.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2025-10-31-deformable_detr.html</loc>
-    <lastmod>2025-12-21T18:03:39.741Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2025-11-15-LiftSplatShoot.html</loc>
-    <lastmod>2025-12-21T18:03:21.638Z</lastmod>
-  </url>
-  <url>
     <loc>https://akashprakas.github.io/akashBlog/about.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2022-07-30-so what does mobile blocks save.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
-  </url>
-  <url>
-    <loc>https://akashprakas.github.io/akashBlog/posts/2020-12-19-hacking_fasterrcnn.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
+    <lastmod>2026-10-04T20:29:45.632Z</lastmod>
   </url>
   <url>
     <loc>https://akashprakas.github.io/akashBlog/posts/2020-09-20-pytorch_iou.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
+    <lastmod>2026-10-04T20:29:45.632Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2025-10-31-deformable_detr.html</loc>
+    <lastmod>2026-10-04T20:29:45.633Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-08-24-understanding the losses in centernet architecture.html</loc>
+    <lastmod>2026-10-04T20:29:45.633Z</lastmod>
   </url>
   <url>
     <loc>https://akashprakas.github.io/akashBlog/posts/2022-11-23-simpleonlinerealtimetracking.html</loc>
-    <lastmod>2025-12-21T18:02:40.400Z</lastmod>
+    <lastmod>2026-10-04T20:29:45.633Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/index.html</loc>
+    <lastmod>2026-10-10T18:34:15.767Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2026-03-30-mulitmodal-generative-rl-finetuning/index.html</loc>
+    <lastmod>2026-10-10T18:34:57.356Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2022-07-30-so what does mobile blocks save.html</loc>
+    <lastmod>2026-10-04T20:29:45.633Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2020-12-19-hacking_fasterrcnn.html</loc>
+    <lastmod>2026-10-04T20:29:45.633Z</lastmod>
+  </url>
+  <url>
+    <loc>https://akashprakas.github.io/akashBlog/posts/2025-11-15-LiftSplatShoot.html</loc>
+    <lastmod>2026-10-04T20:29:45.639Z</lastmod>
   </url>
 </urlset>
