@@ -1,0 +1,45 @@
+---
+title: "When and Why Functional Anchoring Preserves Modes in Generative RL Fine-Tuning"
+description: "Why reward-only RL collapses pretrained diffusion/flow policies to single modes, and how paired-noise anchoring plus mutual information resolves the tension between stability and discovery."
+author: "Akash"
+date: "2026-03-30"
+categories: [reinforcement-learning, diffusion-models, flow-matching, generative-policies]
+toc: true
+---
+
+::: {.callout-important}
+### Headline Finding
+In multimodal policy fine-tuning, standard task success ($\text{SR}$) can completely conceal behavioral collapse. Plain DSRL scores $\text{SR} = 1.000$, but collapses to a single mode ($\text{SR}_M = 0.250, \text{mcf} = 1/4$).
+:::
+
+## 1. The Core Tension: Stability vs. Mode Discovery
+
+```{mermaid}
+flowchart LR
+    A[Pretrained Policy f₀] -->|DSRL / ReinFlow without anchor| B[Mode Collapse: 1/4 Modes]
+    A -->|Functional Anchor: Paired Noise| C[Mode Preservation: 4/4 Modes]
+    A -->|BMD: Mutual Information| D[Mode Discovery: Shifted Goals]
+    C & D --> E[BMD + Anchor: Robust Multimodal Generalization]
+```
+
+## 2. Quantitative Results
+
+| Method | Environment | Task Success ($\text{SR}$) | Balanced Success ($\text{SR}_M$) | Reliable Modes ($\text{mcf}$) | Entropy ($H_s / \log M$) |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| Plain DSRL | $g_2$ | 1.000 | 0.250 | 1.00 | 0.000 |
+| Full BMD | $g_2$ | 0.976 | 0.797 | 3.12 | 0.793 |
+| **BMD + Anchor** | $g_2$ | **0.9995** | **0.968** | **3.88** | **0.910** |
+| Plain DSRL | $g_5$ | 0.9995 | 0.250 | 1.00 | 0.000 |
+| **Functional Anchor** | $g_5$ | **0.993** | **0.993** | **4.00** | **0.978** |
+
+## 3. The Functional Anchor Formulation
+
+Given input noise $\varepsilon \sim \mathcal{N}(0, I)$ and pretrained generator $f_0(s, \varepsilon)$:
+
+$$
+\mathcal{L}_{\text{anchor}}(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \varepsilon \sim \mathcal{N}(0, I)} \left\| f_\theta(s, \varepsilon) - f_0(s, \varepsilon) \right\|^2
+$$
+
+::: {.callout-note}
+Notice that $f_0$ receives the exact same noise realization $\varepsilon$ as $f_\theta$. This couples the latent noise coordinates to the original behavioral basins.
+:::
