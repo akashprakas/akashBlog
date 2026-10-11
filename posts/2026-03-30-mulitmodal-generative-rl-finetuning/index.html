@@ -7,10 +7,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Akash">
-<meta name="dcterms.date" content="2026-03-30">
+<meta name="dcterms.date" content="2026-10-11">
 <meta name="description" content="Why reward-only RL collapses pretrained diffusion/flow policies to single modes, and how paired-noise anchoring plus mutual information resolves the tension between stability and discovery.">
 
-<title>When and Why Functional Anchoring Preserves Modes in Generative RL Fine-Tuning – Akash’s Blog</title>
+<title>Preserve or Discover? Functional Anchors and Mutual Information in Generative RL Fine-Tuning – Akash’s Blog</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -80,9 +80,6 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
-<script src="../../site_libs/quarto-diagram/mermaid.min.js"></script>
-<script src="../../site_libs/quarto-diagram/mermaid-init.js"></script>
-<link href="../../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
   <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
@@ -322,7 +319,7 @@ window.Quarto = {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">When and Why Functional Anchoring Preserves Modes in Generative RL Fine-Tuning</h1>
+      <h1 class="title">Preserve or Discover? Functional Anchors and Mutual Information in Generative RL Fine-Tuning</h1>
                   <div>
         <div class="description">
           Why reward-only RL collapses pretrained diffusion/flow policies to single modes, and how paired-noise anchoring plus mutual information resolves the tension between stability and discovery.
@@ -350,7 +347,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">March 30, 2026</p>
+        <p class="date">October 11, 2026</p>
       </div>
     </div>
     
@@ -366,9 +363,19 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#the-core-tension-stability-vs.-mode-discovery" id="toc-the-core-tension-stability-vs.-mode-discovery" class="nav-link active" data-scroll-target="#the-core-tension-stability-vs.-mode-discovery">1. The Core Tension: Stability vs.&nbsp;Mode Discovery</a></li>
-  <li><a href="#quantitative-results" id="toc-quantitative-results" class="nav-link" data-scroll-target="#quantitative-results">2. Quantitative Results</a></li>
-  <li><a href="#the-functional-anchor-formulation" id="toc-the-functional-anchor-formulation" class="nav-link" data-scroll-target="#the-functional-anchor-formulation">3. The Functional Anchor Formulation</a></li>
+  <li><a href="#core-problem" id="toc-core-problem" class="nav-link active" data-scroll-target="#core-problem">Core problem</a></li>
+  <li><a href="#a-small-environment-that-epxoses-mode-collapse" id="toc-a-small-environment-that-epxoses-mode-collapse" class="nav-link" data-scroll-target="#a-small-environment-that-epxoses-mode-collapse">A small environment that epxoses mode collapse</a></li>
+  <li><a href="#success-rate-is-not-enough" id="toc-success-rate-is-not-enough" class="nav-link" data-scroll-target="#success-rate-is-not-enough">Success rate is not enough</a></li>
+  <li><a href="#functional-anchoring" id="toc-functional-anchoring" class="nav-link" data-scroll-target="#functional-anchoring">Functional anchoring</a>
+  <ul class="collapse">
+  <li><a href="#the-anchor-has-a-working-window" id="toc-the-anchor-has-a-working-window" class="nav-link" data-scroll-target="#the-anchor-has-a-working-window">The anchor has a working window</a></li>
+  </ul></li>
+  <li><a href="#when-the-old-modes-remain-useful" id="toc-when-the-old-modes-remain-useful" class="nav-link" data-scroll-target="#when-the-old-modes-remain-useful">When the old modes remain useful</a>
+  <ul class="collapse">
+  <li><a href="#dsrl-preserving-decoded-behavior-during-noise-steering" id="toc-dsrl-preserving-decoded-behavior-during-noise-steering" class="nav-link" data-scroll-target="#dsrl-preserving-decoded-behavior-during-noise-steering">DSRL: preserving decoded behavior during noise steering</a></li>
+  <li><a href="#reinflow-separating-adaptation-from-diversity" id="toc-reinflow-separating-adaptation-from-diversity" class="nav-link" data-scroll-target="#reinflow-separating-adaptation-from-diversity">ReinFlow: separating adaptation from diversity</a></li>
+  </ul></li>
+  <li><a href="#how-preservation-degrades-with-rotation" id="toc-how-preservation-degrades-with-rotation" class="nav-link" data-scroll-target="#how-preservation-degrades-with-rotation">How preservation degrades with rotation</a></li>
   </ul>
 </nav>
     </div>
@@ -393,27 +400,131 @@ window.Quarto = {
 <p>In multimodal policy fine-tuning, standard task success (<span class="math inline">\(\text{SR}\)</span>) can completely conceal behavioral collapse. Plain DSRL scores <span class="math inline">\(\text{SR} = 1.000\)</span>, but collapses to a single mode (<span class="math inline">\(\text{SR}_M = 0.250, \text{mcf} = 1/4\)</span>).</p>
 </div>
 </div>
-<section id="the-core-tension-stability-vs.-mode-discovery" class="level2">
-<h2 class="anchored" data-anchor-id="the-core-tension-stability-vs.-mode-discovery">1. The Core Tension: Stability vs.&nbsp;Mode Discovery</h2>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">flowchart LR
-    A[Pretrained Policy f₀] --&gt;|DSRL / ReinFlow without anchor| B[Mode Collapse: 1/4 Modes]
-    A --&gt;|Functional Anchor: Paired Noise| C[Mode Preservation: 4/4 Modes]
-    A --&gt;|BMD: Mutual Information| D[Mode Discovery: Shifted Goals]
-    C &amp; D --&gt; E[BMD + Anchor: Robust Multimodal Generalization]
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
+<section id="core-problem" class="level2">
+<h2 class="anchored" data-anchor-id="core-problem">Core problem</h2>
+<p>Generative policies that use diffusion or flow for there action policy have the ability to represent different ways to solve a task, thereby having inherent multimodal behavior in them. When we do only BC and measure the entropy or modes we can see that the mulitmodality is presevered, but unfortunately when we do RL finetuning on them this often destroys the diversity and make the policy converge to one goal.</p>
+<p><img src="fig0_hook.svg" class="img-fluid"></p>
+<p>This failure can be suprisingly easy to miss , in this i used a fourgoal env where the policy gets equal reward when reaching one of the four goal , what we observed was that teh when doing RL fine tuning on them the unconstrained policy reached a 100% success while sending every trajectory to one goal, so if we judge only by task reward the policy is perfect.But if we judge by the behaviors ie the different goals it reaches the policy have completely collapsed.</p>
+<p>We looked into two ways of doing this. - ** Functional anchoring ** , which discourages the fine tuned policy from changing the pretrained noise to action function too much. - <strong><a href="https://behav-mod-dis.github.io/">Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies</a> </strong> An already existing work from Longhini etal , which uses mutual information objective to make different latent skills produce different trajectories.</p>
+<p>Main finding is that these mechanism solve different problem, and when combined works better than alone.</p>
+<blockquote class="blockquote">
+<p>Functional anchoring preserves useful behaviors that are already present. Mutual information helps discover or reorganize behaviors when the old ones no longer solve the task.</p>
+</blockquote>
+<p>This distinction is important because it is directly tied to the positive results and failure cases as well.</p>
+</section>
+<section id="a-small-environment-that-epxoses-mode-collapse" class="level2">
+<h2 class="anchored" data-anchor-id="a-small-environment-that-epxoses-mode-collapse">A small environment that epxoses mode collapse</h2>
+<p>The environment starts at the origin and contains four possible goals. Demonstrations reach four equally valid modes, so a BC policy can learn a multimodal distribution over trajectories.</p>
+<p>We then change the reward landscape during RL fine-tuning in two ways:</p>
+<ol type="1">
+<li><strong>Compatible outward shift.</strong> The goals move farther from the origin and rotate by only 7.9 degrees. The old behavioral modes are still useful, but they must be extended and adjusted slightly. We call this the “radius-shift” setting below for brevity, but it is not a mathematically pure radius change.</li>
+<li><strong>Rotation.</strong> The goals rotate by 45 degrees. Each new goal lies between two old demonstration directions, so merely preserving the old modes is insufficient.</li>
+</ol>
+<p>These shifts create a useful controlled comparison:</p>
+<pre class="text"><code>Outward + 7.9° shift → preserve and adapt existing modes
+45° rotation        → reorganize or discover modes</code></pre>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig1_geometry.svg" class="img-fluid figure-img"></p>
+<figcaption>The demonstration goals, the compatible outward shift, and the 45° rotation. Dashed circles mark the original success regions.</figcaption>
+</figure>
 </div>
 </section>
-<section id="quantitative-results" class="level2">
-<h2 class="anchored" data-anchor-id="quantitative-results">2. Quantitative Results</h2>
+<section id="success-rate-is-not-enough" class="level2">
+<h2 class="anchored" data-anchor-id="success-rate-is-not-enough">Success rate is not enough</h2>
+<p>Suppose all rollouts reach one goal and ignore the other three. Overall success is still 100%, even though the policy has retained only one quarter of the intended behavior. So i reuse the same metrics used in the Behavior mode Discovery paper.</p>
+<ul>
+<li><strong>SR:</strong> overall task success.</li>
+<li><strong>SR_M:</strong> success averaged across the four modes rather than across episodes.</li>
+<li><strong>Mode coverage:</strong> the number of modes whose conditional success is at least 80%, with a minimum-attempt requirement.</li>
+<li><strong>Successful-mode entropy:</strong> how evenly successful trajectories are distributed among the modes.</li>
+</ul>
+<p>The minimum attempt rule matters since a mode visited once with one successful episode should not count as reliably solved.</p>
+<p>Every final policy was evaluated for 1,024 episodes per training seed. These episodes improve the precision of evaluating one policy; the independent training seeds measure the variability of the learning algorithm.</p>
+</section>
+<section id="functional-anchoring" class="level2">
+<h2 class="anchored" data-anchor-id="functional-anchoring">Functional anchoring</h2>
+<p>Let <span class="math inline">\(f_0(s,\epsilon)\)</span> be the pretrained policy’s action for state <span class="math inline">\(s\)</span> and noise <span class="math inline">\(\epsilon\)</span>, and let <span class="math inline">\(f_\theta(s,\epsilon)\)</span> be the fine-tuned policy. The functional anchor is</p>
+<p><span class="math display">\[
+\mathcal L_{\text{anchor}}
+=
+\mathbb E_{s,\epsilon}
+\left[
+\left\|f_\theta(s,\epsilon)-\operatorname{sg}\!\left(f_0(s,\epsilon)\right)\right\|^2
+\right].
+\]</span></p>
+<p>The same noise is being passed through teh current and reference (detached ) policies. The idea being the loss preserves not only the overall action distribution but also the correspondence between regions of noise space and behaviors. On a high level if one noise region orginially produced an upward trajectory and other produced a leftward trajectory in the base frozen BC policy , the anchor makes it costly to remap both regions onto a single direction during RL .</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig2_anchor.svg" class="img-fluid figure-img"></p>
+<figcaption>The paired-noise functional anchor: the same noise goes through the frozen BC flow and the trainable flow, and the squared difference of the two actions is added to the PPO loss.</figcaption>
+</figure>
+</div>
+<p>The coefficient <span class="math inline">\(\lambda\)</span> controls a familiar trade-off:</p>
+<pre class="text"><code>weak anchor     → reward dominates; modes can collapse
+moderate anchor → adaptation with behavioral preservation
+strong anchor   → reference is preserved, but adaptation may be blocked</code></pre>
+<p>This is very much related to <a href="https://arxiv.org/abs/2502.02538">Flow Q-Learning (FQL)</a>. FQL trains a one-step actor to maximize an offline critic while matching the action produced by a pretrained flow for the same sampled noise. It also interprets this shared-noise squared error as an upper bound on the Wasserstein distance between their action distributions. The regularizer and its transport interpretation are therefore not new here.</p>
+<p>The role of regualizer is different in this study. FQL distills a multi-step flow into a separately deployed one-step policy using offline dataset states and Q-learning. We instead use the paired loss as a behavioral trust region during online PPO fine tuning , either by steering a forzen diffusion decoder as in the case of DSRL or by updating teh multi-step flow directly as in the case of reinflow. ReinFlow’s paper contains a related paired-output objective; later we separately compare paired random noise with the released implementation’s single input <span class="math inline">\(x_0=0\)</span>.</p>
+<section id="the-anchor-has-a-working-window" class="level3">
+<h3 class="anchored" data-anchor-id="the-anchor-has-a-working-window">The anchor has a working window</h3>
+<p>So we did a 10 seeded sweep on the different lamba values for both DSRL and reinflow to see the effective region of lamba for both DSRL and Reinflow. Each policy was evaluated for 256 episodes. For a consistent comparison, we recomputed coverage from the saved attempt counts using the same floor, a mode requires at least 26 attempts and at least 80% conditional success.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig4_lambda.svg" class="img-fluid figure-img"></p>
+<figcaption>DSRL and ReinFlow exhibit the same preservation-adaptation trade-off at different anchor-coefficient scales.</figcaption>
+</figure>
+</div>
+<p>These are not universal values, the numerical value of lambda might depend on policy backend, action normalization , and the task. This to show that both under regularization and over regularization are real failure modes.</p>
+</section>
+</section>
+<section id="when-the-old-modes-remain-useful" class="level2">
+<h2 class="anchored" data-anchor-id="when-the-old-modes-remain-useful">When the old modes remain useful</h2>
+<section id="dsrl-preserving-decoded-behavior-during-noise-steering" class="level3">
+<h3 class="anchored" data-anchor-id="dsrl-preserving-decoded-behavior-during-noise-steering">DSRL: preserving decoded behavior during noise steering</h3>
+<p>Functional anchoring was first testesd with DSRL where the pretraiend diffusion policy remain frozen as n action decoder , while PPO trains a steering policy that transforms its input noise. The anchor compares the action decoded from the steered noise with the reference action decoded from the corresponding unsteered noise.</p>
+<p>The compatible outward shift is favorable to preservation , it might be because the pretrained BC trajectory distribution already point in useful direction and the new goal only needed to travel further and rotate slightly. Plain reward only DSRL adapted to new goal , but lost diversity and collapsed to one goal.</p>
+<p>For the final DSRL radius-shift study:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th style="text-align: right;">SR</th>
+<th style="text-align: right;">SR_M</th>
+<th style="text-align: right;">Coverage</th>
+<th style="text-align: right;">Successful-mode entropy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BMD</td>
+<td style="text-align: right;">0.993</td>
+<td style="text-align: right;">0.943</td>
+<td style="text-align: right;">3.80/4</td>
+<td style="text-align: right;">0.911</td>
+</tr>
+<tr class="even">
+<td>Functional anchor</td>
+<td style="text-align: right;">0.956</td>
+<td style="text-align: right;">0.954</td>
+<td style="text-align: right;"><strong>4.00/4</strong></td>
+<td style="text-align: right;"><strong>0.951</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The average difference does not tell the whole story. BMD usually performed extremely well, but one seed dropped to two covered modes. Functional anchoring covered all four modes in every final seed. Across the two radius-shift batches, it achieved full coverage in 18/18 seeds, compared with 14/18 for BMD.</p>
+</section>
+<section id="reinflow-separating-adaptation-from-diversity" class="level3">
+<h3 class="anchored" data-anchor-id="reinflow-separating-adaptation-from-diversity">ReinFlow: separating adaptation from diversity</h3>
+<p>Another experiment was conducted with reinflow to see the working of functional anchor with an flow based PPO fine tuning. Five different experiments were done</p>
+<ul>
+<li>freezing the policy;</li>
+<li>retaining stochasticity through a trainable noise head;</li>
+<li>unconstrained reward optimization;</li>
+<li>anchoring only the flow output at <span class="math inline">\(x_0=0\)</span>;</li>
+<li>anchoring outputs over randomly sampled, shared noise.</li>
+</ul>
+<p>The final results were:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 13%">
@@ -425,77 +536,71 @@ window.Quarto = {
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Method</th>
-<th style="text-align: center;">Environment</th>
-<th style="text-align: center;">Task Success (<span class="math inline">\(\text{SR}\)</span>)</th>
-<th style="text-align: center;">Balanced Success (<span class="math inline">\(\text{SR}_M\)</span>)</th>
-<th style="text-align: center;">Reliable Modes (<span class="math inline">\(\text{mcf}\)</span>)</th>
-<th style="text-align: center;">Entropy (<span class="math inline">\(H_s / \log M\)</span>)</th>
+<th>ReinFlow variant</th>
+<th style="text-align: right;">λ</th>
+<th style="text-align: right;">SR</th>
+<th style="text-align: right;">SR_M</th>
+<th style="text-align: right;">Floored coverage</th>
+<th style="text-align: right;">Successful-mode entropy</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">Plain DSRL</td>
-<td style="text-align: center;"><span class="math inline">\(g_2\)</span></td>
-<td style="text-align: center;">1.000</td>
-<td style="text-align: center;">0.250</td>
-<td style="text-align: center;">1.00</td>
-<td style="text-align: center;">0.000</td>
+<td>Frozen</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.567</td>
+<td style="text-align: right;">0.556</td>
+<td style="text-align: right;">0/4</td>
+<td style="text-align: right;">0.970</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Full BMD</td>
-<td style="text-align: center;"><span class="math inline">\(g_2\)</span></td>
-<td style="text-align: center;">0.976</td>
-<td style="text-align: center;">0.797</td>
-<td style="text-align: center;">3.12</td>
-<td style="text-align: center;">0.793</td>
+<td>Noise-only</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.526</td>
+<td style="text-align: right;">0.515</td>
+<td style="text-align: right;">0/4</td>
+<td style="text-align: right;">0.968</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>BMD + Anchor</strong></td>
-<td style="text-align: center;"><span class="math inline">\(g_2\)</span></td>
-<td style="text-align: center;"><strong>0.9995</strong></td>
-<td style="text-align: center;"><strong>0.968</strong></td>
-<td style="text-align: center;"><strong>3.88</strong></td>
-<td style="text-align: center;"><strong>0.910</strong></td>
+<td>Plain RL</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">0.281</td>
+<td style="text-align: right;">1.00/4</td>
+<td style="text-align: right;">0.001</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Plain DSRL</td>
-<td style="text-align: center;"><span class="math inline">\(g_5\)</span></td>
-<td style="text-align: center;">0.9995</td>
-<td style="text-align: center;">0.250</td>
-<td style="text-align: center;">1.00</td>
-<td style="text-align: center;">0.000</td>
+<td>Upstream anchor, <span class="math inline">\(x_0=0\)</span></td>
+<td style="text-align: right;">0.01</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">0.906</td>
+<td style="text-align: right;">2.25/4</td>
+<td style="text-align: right;">0.571</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Functional Anchor</strong></td>
-<td style="text-align: center;"><span class="math inline">\(g_5\)</span></td>
-<td style="text-align: center;"><strong>0.993</strong></td>
-<td style="text-align: center;"><strong>0.993</strong></td>
-<td style="text-align: center;"><strong>4.00</strong></td>
-<td style="text-align: center;"><strong>0.978</strong></td>
+<td>Functional paired-noise anchor</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;"><strong>1.000</strong></td>
+<td style="text-align: right;"><strong>1.000</strong></td>
+<td style="text-align: right;"><strong>4.00/4</strong></td>
+<td style="text-align: right;"><strong>0.955</strong></td>
 </tr>
 </tbody>
 </table>
+<p>Here fully frozen means both the pretained mean velocity field and its exploration noise head network are held fixed. In noise head only control, the pretrained velocity field network remain frozen, while PPO updates the smaller head that predicts the transition std_dev <span class="math inline">\(\sigma(s,t)\)</span>. This can change hwo much noise is injected at each flow step, but not the mean direction. Final one trains both .</p>
+<p>Each control fails in a different way:</p>
+<ul>
+<li>A fully frozen actor preserves diverse visitation but cannot adapt to the shifted task.</li>
+<li>Updating only the noise head changes stochasticity but still cannot move the mean behavior far enough to solve the shifted task reliably.</li>
+<li>Plain RL solves the task but collapses onto one mode.</li>
+<li>The single-point anchor helps, but constraining <span class="math inline">\(x_0=0\)</span> might not help to in understanding what the flow does over the reset of the noise space.</li>
+<li>The paired-noise anchor constrains the sampled noise-to-action function and preserves every mode in every seed.</li>
+</ul>
+<p>The frozen control also shows that the functional result is not simply obtained by refusing to learn. The frozen policy remained diverse but under reached the shifted goals, whereas the functionally anchored policy adapted and succeeded. So these suggest functional anchor helps in retaining the base BC policy behavioral structure and mode distributions.</p>
 </section>
-<section id="the-functional-anchor-formulation" class="level2">
-<h2 class="anchored" data-anchor-id="the-functional-anchor-formulation">3. The Functional Anchor Formulation</h2>
-<p>Given input noise <span class="math inline">\(\varepsilon \sim \mathcal{N}(0, I)\)</span> and pretrained generator <span class="math inline">\(f_0(s, \varepsilon)\)</span>:</p>
-<p><span class="math display">\[
-\mathcal{L}_{\text{anchor}}(\theta) = \mathbb{E}_{s \sim \mathcal{D}, \varepsilon \sim \mathcal{N}(0, I)} \left\| f_\theta(s, \varepsilon) - f_0(s, \varepsilon) \right\|^2
-\]</span></p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Notice that <span class="math inline">\(f_0\)</span> receives the exact same noise realization <span class="math inline">\(\varepsilon\)</span> as <span class="math inline">\(f_\theta\)</span>. This couples the latent noise coordinates to the original behavioral basins.</p>
-</div>
-</div>
+</section>
+<section id="how-preservation-degrades-with-rotation" class="level2">
+<h2 class="anchored" data-anchor-id="how-preservation-degrades-with-rotation">How preservation degrades with rotation</h2>
 
 
 </section>
