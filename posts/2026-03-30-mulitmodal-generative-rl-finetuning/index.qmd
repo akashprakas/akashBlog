@@ -11,13 +11,13 @@ toc: true
 
 ## Core problem 
 
-Generative policies that use diffusion or flow for there action policy have the ability to represent different ways to solve a task,
-thereby having inherent multimodal behavior in them. When we do only BC and measure the entropy or modes we can see that the mulitmodality is presevered, but unfortunately when we do RL finetuning on them this often destroys the diversity and make the 
+Generative policies that use diffusion or flow for their action policy have the ability to represent different ways to solve a task,
+thereby having inherent multimodal behavior in them. When we do only BC and measure the entropy or modes we can see that the multimodality is preserved, but unfortunately when we do RL finetuning on them this often destroys the diversity and make the 
 policy converge to one goal.
 
 ![](fig0_hook.svg)
 
-This failure can be suprisingly easy to miss , in this i used a fourgoal env where the policy gets equal reward when reaching one of the four goal , what we observed was that teh when doing RL fine tuning on them the unconstrained policy reached a 100% success
+This failure can be surprisingly easy to miss , in this i used a fourgoal env where the policy gets equal reward when reaching one of the four goal , what we observed was that the when doing RL fine tuning on them the unconstrained policy reached a 100% success
 while sending every trajectory to one goal, so if we judge only by task reward the policy is perfect.But if we judge by the behaviors ie the different goals it reaches the policy have completely collapsed.
 
 We looked into two ways of doing this:
@@ -77,7 +77,7 @@ $$
 \right].
 $$
 
-The same noise is being passed through teh current and reference (detached ) policies. The idea being the loss preserves not only the overall action distribution but also the correspondence between regions of noise space and behaviors. On a high level if one noise region orginially produced an upward trajectory and other produced a leftward trajectory in the base frozen BC policy , the anchor makes it costly to remap both regions onto a  single direction during RL .
+The same noise is being passed through the current and reference (detached ) policies. The idea being the loss preserves not only the overall action distribution but also the correspondence between regions of noise space and behaviors. On a high level if one noise region originally produced an upward trajectory and other produced a leftward trajectory in the base frozen BC policy , the anchor makes it costly to remap both regions onto a  single direction during RL .
 
 ![The paired-noise functional anchor: the same noise goes through the frozen BC flow and the trainable flow, and the squared difference of the two actions is added to the PPO loss.](fig2_anchor.svg)
 
@@ -92,11 +92,11 @@ strong anchor   → reference is preserved, but adaptation may be blocked
 
 This is very much related to [Flow Q-Learning (FQL)](https://arxiv.org/abs/2502.02538). FQL trains a one-step actor to maximize an offline critic while matching the action produced by a pretrained flow for the same sampled noise. It also interprets this shared-noise squared error as an upper bound on the Wasserstein distance between their action distributions. The regularizer and its transport interpretation are therefore not new here.
 
-The role of regualizer is different in this study. FQL distills a multi-step flow into a separately deployed one-step policy using offline dataset states and Q-learning. We instead use the paired loss as a behavioral trust region during online PPO fine tuning , either by steering a forzen diffusion decoder as in the case of DSRL or by updating teh multi-step flow directly as in the case of reinflow. ReinFlow's paper contains a related paired-output objective; later we separately compare paired random noise with the released implementation's single input $x_0=0$.
+The role of regularizer is different in this study. FQL distills a multi-step flow into a separately deployed one-step policy using offline dataset states and Q-learning. We instead use the paired loss as a behavioral trust region during online PPO fine tuning , either by steering a frozen diffusion decoder as in the case of DSRL or by updating the multi-step flow directly as in the case of reinflow. ReinFlow's paper contains a related paired-output objective; later we separately compare paired random noise with the released implementation's single input $x_0=0$.
 
 ### The anchor has a working window
 
-So we did a 10 seeded sweep on the different lamba values for both DSRL and reinflow to see the effective region of lamba for both DSRL and Reinflow. Each policy was evaluated for 256 episodes. For a consistent comparison, we recomputed coverage from the saved attempt counts using the same floor,  a mode requires at least 26 attempts and at least 80% conditional success.
+So we did a 10 seeded sweep on the different lambda values for both DSRL and reinflow to see the effective region of lambda for both DSRL and Reinflow. Each policy was evaluated for 256 episodes. For a consistent comparison, we recomputed coverage from the saved attempt counts using the same floor,  a mode requires at least 26 attempts and at least 80% conditional success.
 
 ![DSRL and ReinFlow exhibit the same preservation-adaptation trade-off at different anchor-coefficient scales.](fig4_lambda.svg)
 
@@ -107,7 +107,7 @@ These are not universal values, the numerical value of lambda might depend on po
 
 ### DSRL: preserving decoded behavior during noise steering
 
-Functional anchoring was first testesd with DSRL where the pretraiend diffusion policy remain frozen as n action decoder , while PPO trains a steering policy that transforms its input noise. The anchor compares the action decoded from the steered noise with the reference action decoded from the corresponding unsteered noise.
+Functional anchoring was first tested with DSRL where the pretrained diffusion policy remain frozen as an action decoder , while PPO trains a steering policy that transforms its input noise. The anchor compares the action decoded from the steered noise with the reference action decoded from the corresponding unsteered noise.
 
 The compatible outward shift is favorable to preservation , it might be because the pretrained BC trajectory distribution already point in useful direction and the new goal only needed to travel further and rotate slightly. Plain reward only DSRL adapted to new goal , but lost diversity and collapsed to one goal.
 
@@ -143,7 +143,7 @@ The final results were:
 | Upstream anchor, $x_0=0$ | 0.01 | 1.000 | 0.906 | 2.25/4 | 0.571 |
 | Functional paired-noise anchor | 0.03 | **1.000** | **1.000** | **4.00/4** | **0.955** |
 
-Here fully frozen means  both the pretained mean velocity field and its exploration noise head network are held fixed. In noise head only control, the pretrained velocity field network remain frozen, while PPO updates the smaller head that predicts the transition std_dev $\sigma(s,t)$. This can change hwo much noise is injected at each flow step, but not the mean direction. Final one trains both .
+Here fully frozen means  both the pretrained mean velocity field and its exploration noise head network are held fixed. In noise head only control, the pretrained velocity field network remain frozen, while PPO updates the smaller head that predicts the transition std_dev $\sigma(s,t)$. This can change how much noise is injected at each flow step, but not the mean direction. Final one trains both .
 
 
 Each control fails in a different way:
@@ -151,10 +151,10 @@ Each control fails in a different way:
 - A fully frozen actor preserves diverse visitation but cannot adapt to the shifted task.
 - Updating only the noise head changes stochasticity but still cannot move the mean behavior far enough to solve the shifted task reliably.
 - Plain RL solves the task but collapses onto one mode.
-- The single-point anchor helps, but constraining $x_0=0$ might not help to in understanding what the flow does over the reset of the noise space.
+- The single-point anchor helps, but constraining $x_0=0$ might not help to in understanding what the flow does over the rest of the noise space.
 - The paired-noise anchor constrains the sampled noise-to-action function and preserves every mode in every seed.
 
-The frozen control also shows that the functional result is not simply obtained by refusing to learn. The frozen policy remained diverse but under reached the shifted goals, whereas the functionally anchored policy adapted and succeeded. So these suggest functional anchor helps in retaining the base BC policy behavioral structure and mode distributions.
+The frozen control also shows that the functional result is not simply obtained by refusing to learn. The frozen policy remained diverse but under-reached the shifted goals, whereas the functionally anchored policy adapted and succeeded. So these suggest functional anchor helps in retaining the base BC policy behavioral structure and mode distributions.
 
 ## How preservation degrades with rotation
 
@@ -203,14 +203,14 @@ The ablations also showed that simply adding latent capacity was insufficient. T
 
 ### What made BMD work in practice
 
-The first BMD implementation performed poorly even though a steering search theough the noise space confirmed that the frozen decoder could reach all four goals.
-The limitation was therefore not the action space reachability buth the MI optimization pipeline was failing to turn that capacity into useful skills. The below
+The first BMD implementation performed poorly even though a steering search through the noise space confirmed that the frozen decoder could reach all four goals.
+The limitation was therefore not the action space reachability but the MI optimization pipeline was failing to turn that capacity into useful skills. The below
 four details helped in getting better result.
 
 1.  **The classifier needed a meaningful spatial scale.** What helped the most was that we needed to add noise to the input to the classifier and this was helping BMD the most and without it BMD barely worked, it might be because without  it could identify skills from tiny, behaviorally irrelevant differences near the origin. 
 2.  **The inference model needed enough optimization.**  With one full batch update per epoch, its prediction remained close to uniform and the intrinsic reward was nearly zero. The final working config uses 32 classifier minibatch updates per epoch with a higher inference learning rate.
 3. **Discovery had to precede task optimization.** Applying task reward from the beginning collapsed the latent skills before the inference model had organized them. A discovery warm up followed by task finetuning worked better.
-4. **The steering distribution needed to retain variance.** Task optimization otherwise shrank its standard deviation and removed access to alternative directions. A small steeringpolicy entropy bonus improved reliability. This bonus is an implementation addition in the reproduction, not a component specified by the BMD paper.
+4. **The steering distribution needed to retain variance.** Task optimization otherwise shrank its standard deviation and removed access to alternative directions. A small steering policy entropy bonus improved reliability. This bonus is an implementation addition in the reproduction, not a component specified by the BMD paper.
 
 
 The broader lesson is not that these particular hyperparameters transfer unchanged. It is that high mutual information can still represent useless distinctions, and that the policy must retain enough exploration capacity for the discovered distinctions to become successful behavioral modes.
@@ -235,9 +235,9 @@ Functional anchor  → limits destructive drift once those behaviors emerge
 ```
 
 
-## Some leasons learned during experiments
+## Some lessons learned during experiments
 
-1. **Reference quality matters.** Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. While for BMD its the other way around, having a weaker BC is more helpful for skill discovery and thus preserving the multi modality
+1. **Reference quality matters.** Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. Conversely, for BMD steering a frozen diffusion decoder, extensive BC training (e.g., 20k steps) over-specializes the decoder's attractor manifold along the demonstration axes, causing held-out diagonal coverage to fall ($3.12 \to 1.12$ modes). A less specialized decoder prior leaves more reachable latent paths for downstream skill discovery.
 2. **Action entropy is not mode preservation.** Local stochasticity can remain high while all trajectories belong to the same global behavioral mode. So no matter how much entropy bonus you gave you wont get better mode coverage.
 3. **Raw success can reward collapse.** Mode balanced metrics and per mode attempt counts are necessary whenever several solutions are intended. Its easier to believe that we made the policy better if we define only success metrics and not properly define the mode coverage metrics.
 
@@ -254,9 +254,12 @@ The experiments suggest the following practical guide:
 | Discovery is possible but unstable | BMD plus a moderate anchor, pending final confirmation |
 | Reference policy lacks useful competence | Improve the reference or use discovery; anchoring alone will not help |
 
-Funtional anchoring should therefore be viewed as a **behavioral trust region**.  It can prevent reward optimization from erasing useful multimodal structure.But it could hurt discovery, when the downstream taks requires genuinely different behaviors. So basically whether to use functional anchor or not can depend on 
+Functional anchoring should therefore be viewed as a **behavioral trust region**.  It can prevent reward optimization from erasing useful multimodal structure.But it could hurt discovery, when the downstream task requires genuinely different behaviors. So basically whether to use functional anchor or not can depend on 
 
-> Does the downstream task ask the policy to preserve its existing behavioral decomposition, or to create a new one?
+::: {.callout-tip}
+### Diagnostic Question for RL Fine-Tuning
+Does the downstream task require the policy to **preserve and locally adapt** an existing behavioral decomposition, or to **discover a new one**?
+:::
 
 The answer determines whether a functional anchor is protection or a constraint in the wrong direction.
 
