@@ -6,6 +6,8 @@ website:
   site-url: https://akashprakas.github.io/akashBlog/
   navbar:
     right:
+      - text: Posts
+        href: index.qmd
       - about.qmd
       - icon: github
         href: https://github.com/akashprakas
@@ -17,8 +19,8 @@ format:
     theme:
       light: flatly
       dark: darkly
-    fontsize: 1.05em
-    linestretch: 1.65
+    fontsize: 18px
+    linestretch: 1.75
     css: styles.css
     toc: true
     toc-location: right
@@ -28,9 +30,9 @@ format:
     code-line-numbers: false
     highlight-style: atom-one
     grid:
-      body-width: 1200px
-      margin-width: 300px
-      gutter-width: 1.5rem
+      body-width: 820px
+      margin-width: 230px
+      gutter-width: 2.5rem
 
 
 
