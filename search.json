@@ -4,7 +4,7 @@
     "href": "about.html",
     "title": "About",
     "section": "",
-    "text": "Hi, I’m Akash! This is my space to share thoughts and work on things I’m passionate about, including autonomous navigation, state estimation, 3D vision, sensor fusion, and high-performance computing."
+    "text": "Hi, I’m Akash! I’m interested in building intelligent systems that perceive, reason, and act in the physical world. Here, I share my work and learnings in robotics, reinforcement learning, diffusion models, autonomous systems, and high-performance computing."
   },
   {
     "objectID": "posts/2020-09-20-pytorch_iou.html",
