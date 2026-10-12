@@ -189,7 +189,7 @@ This gives the main boundary of the method:
 > A functional anchor can preserve and locally adapt behaviors represented by its reference, but it cannot be expected to manufacture a new behavioral decomposition.
 
 
-## Why BMD could have  discover rotated modes
+## Potential reason why BMD discovered rotate modes
 
 BMD samples a latent skill $z$, executes a skill-conditioned policy, and trains an inference model $q_\phi(z\mid\tau)$ to recover the skill from the resulting behavior. Its intrinsic reward contains
 
@@ -201,7 +201,7 @@ If every latent produced the same trajectory, the classifier cannot infer which 
 
 The ablations also showed that simply adding latent capacity was insufficient. The mutual-information reward was the important component, while the curriculum and policy entropy mainly assisted optimization.
 
-### What made BMD work in practice
+### What made BMD work in practice (Implementation details that helped paper reproduction)
 
 The first BMD implementation performed poorly even though a steering search through the noise space confirmed that the frozen decoder could reach all four goals.
 The limitation was therefore not the action space reachability but the MI optimization pipeline was failing to turn that capacity into useful skills. The below
@@ -237,9 +237,9 @@ Functional anchor  → limits destructive drift once those behaviors emerge
 
 ## Some lessons learned during experiments
 
-1. **Reference quality matters.** Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. Conversely, for BMD steering a frozen diffusion decoder, extensive BC training (e.g., 20k steps) over-specializes the decoder's attractor manifold along the demonstration axes, causing held-out diagonal coverage to fall ($3.12 \to 1.12$ modes). A less specialized decoder prior leaves more reachable latent paths for downstream skill discovery.
+1. **Reference quality matters.** Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. Conversely, for BMD steering a frozen diffusion decoder, extensive BC training (e.g., 20k steps) over-specializes the decoder's on sticking to the action distribution in BC demonstration direction, causing held out diagonal coverage to fall ($3.12 \to 1.12$ modes). A less specialized decoder prior leaves more reachable latent paths for downstream skill discovery.
 2. **Action entropy is not mode preservation.** Local stochasticity can remain high while all trajectories belong to the same global behavioral mode. So no matter how much entropy bonus you gave you wont get better mode coverage.
-3. **Raw success can reward collapse.** Mode balanced metrics and per mode attempt counts are necessary whenever several solutions are intended. Its easier to believe that we made the policy better if we define only success metrics and not properly define the mode coverage metrics.
+3. **Raw success can reward collapse.** The policy might achieve high success by repeatedly using one easy solution while ignoring other valid solutions. If multiple behaviors are desired, measure  we should measure success rate for each mode, number of attempts for each mode and total number of distinct modes covered.
 
 
 ## Preserve or discover?
@@ -274,7 +274,7 @@ The paired-noise loss and its Wasserstein upper-bound interpretation are also es
 
 This study builds directly on four projects:
 
-- **Behavioral Mode Discovery.** Longhini, Emukpere, Renders, and Kim, *[Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies](https://behav-mod-dis.github.io/)* ([arXiv:2605.11387](https://arxiv.org/abs/2605.11387)). BMD provides the mutual-information mode-discovery objective reproduced and studied here.
+- **Behavioral Mode Discovery.** Longhini, Emukpere, Renders, and Kim, *[Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies](https://behav-mod-dis.github.io/)* ([arXiv:2605.11387](https://arxiv.org/abs/2605.11387)). BMD provides the mutual-information mode-discovery objective reproduced and studied here.Also the four goal env base.
 - **Flow Q-Learning.** Park, Li, and Levine, *[Flow Q-Learning](https://arxiv.org/abs/2502.02538)*. FQL is the closest precedent for the shared-noise output-matching loss and its Wasserstein upper-bound interpretation, although it uses the loss for offline one-step policy distillation rather than online mode preservation.
 - **Diffusion Steering Reinforcement Learning.** Wagenmaker et al., *[Steering Your Diffusion Policy with Latent Space Reinforcement Learning](https://arxiv.org/abs/2506.15799)*. DSRL supplies the frozen diffusion decoder and latent-noise steering formulation used by the diffusion experiments.
 - **ReinFlow.** Zhang et al., *[ReinFlow: Fine-tuning Flow Matching Policy with Online Reinforcement Learning](https://arxiv.org/abs/2505.22094)*. ReinFlow supplies the learnable-noise flow-chain PPO formulation used by the direct flow-policy experiments and contains a related paired-output regularizer.
