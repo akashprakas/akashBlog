@@ -380,9 +380,9 @@ window.Quarto = {
   <li><a href="#reinflow-separating-adaptation-from-diversity" id="toc-reinflow-separating-adaptation-from-diversity" class="nav-link" data-scroll-target="#reinflow-separating-adaptation-from-diversity">ReinFlow: separating adaptation from diversity</a></li>
   </ul></li>
   <li><a href="#how-preservation-degrades-with-rotation" id="toc-how-preservation-degrades-with-rotation" class="nav-link" data-scroll-target="#how-preservation-degrades-with-rotation">How preservation degrades with rotation</a></li>
-  <li><a href="#why-bmd-could-have-discover-rotated-modes" id="toc-why-bmd-could-have-discover-rotated-modes" class="nav-link" data-scroll-target="#why-bmd-could-have-discover-rotated-modes">Why BMD could have discover rotated modes</a>
+  <li><a href="#potential-reason-why-bmd-discovered-rotate-modes" id="toc-potential-reason-why-bmd-discovered-rotate-modes" class="nav-link" data-scroll-target="#potential-reason-why-bmd-discovered-rotate-modes">Potential reason why BMD discovered rotate modes</a>
   <ul class="collapse">
-  <li><a href="#what-made-bmd-work-in-practice" id="toc-what-made-bmd-work-in-practice" class="nav-link" data-scroll-target="#what-made-bmd-work-in-practice">What made BMD work in practice</a></li>
+  <li><a href="#what-made-bmd-work-in-practice-implementation-details-that-helped-paper-reproduction" id="toc-what-made-bmd-work-in-practice-implementation-details-that-helped-paper-reproduction" class="nav-link" data-scroll-target="#what-made-bmd-work-in-practice-implementation-details-that-helped-paper-reproduction">What made BMD work in practice (Implementation details that helped paper reproduction)</a></li>
   </ul></li>
   <li><a href="#discovery-and-preservation-may-be-complementary" id="toc-discovery-and-preservation-may-be-complementary" class="nav-link" data-scroll-target="#discovery-and-preservation-may-be-complementary">Discovery and preservation may be complementary</a></li>
   <li><a href="#some-lessons-learned-during-experiments" id="toc-some-lessons-learned-during-experiments" class="nav-link" data-scroll-target="#some-lessons-learned-during-experiments">Some lessons learned during experiments</a></li>
@@ -697,16 +697,16 @@ strong anchor   → reference is preserved, but adaptation may be blocked</code>
 <p>A functional anchor can preserve and locally adapt behaviors represented by its reference, but it cannot be expected to manufacture a new behavioral decomposition.</p>
 </blockquote>
 </section>
-<section id="why-bmd-could-have-discover-rotated-modes" class="level2">
-<h2 class="anchored" data-anchor-id="why-bmd-could-have-discover-rotated-modes">Why BMD could have discover rotated modes</h2>
+<section id="potential-reason-why-bmd-discovered-rotate-modes" class="level2">
+<h2 class="anchored" data-anchor-id="potential-reason-why-bmd-discovered-rotate-modes">Potential reason why BMD discovered rotate modes</h2>
 <p>BMD samples a latent skill <span class="math inline">\(z\)</span>, executes a skill-conditioned policy, and trains an inference model <span class="math inline">\(q_\phi(z\mid\tau)\)</span> to recover the skill from the resulting behavior. Its intrinsic reward contains</p>
 <p><span class="math display">\[
 r_{\text{MI}} = \log q_\phi(z\mid\tau)-\log p(z).
 \]</span></p>
 <p>If every latent produced the same trajectory, the classifier cannot infer which latent was sampled. The policy can increase its intrinsic reward by making different latent codes produce distinguishable behaviors. On the rotated task , this discovery pressure will help divide the new solution space among different skills, functional anchoring alone has no equivalent incentive, it basically encourages the policy to stay close to the reference BC behavior.</p>
 <p>The ablations also showed that simply adding latent capacity was insufficient. The mutual-information reward was the important component, while the curriculum and policy entropy mainly assisted optimization.</p>
-<section id="what-made-bmd-work-in-practice" class="level3">
-<h3 class="anchored" data-anchor-id="what-made-bmd-work-in-practice">What made BMD work in practice</h3>
+<section id="what-made-bmd-work-in-practice-implementation-details-that-helped-paper-reproduction" class="level3">
+<h3 class="anchored" data-anchor-id="what-made-bmd-work-in-practice-implementation-details-that-helped-paper-reproduction">What made BMD work in practice (Implementation details that helped paper reproduction)</h3>
 <p>The first BMD implementation performed poorly even though a steering search through the noise space confirmed that the frozen decoder could reach all four goals. The limitation was therefore not the action space reachability but the MI optimization pipeline was failing to turn that capacity into useful skills. The below four details helped in getting better result.</p>
 <ol type="1">
 <li><strong>The classifier needed a meaningful spatial scale.</strong> What helped the most was that we needed to add noise to the input to the classifier and this was helping BMD the most and without it BMD barely worked, it might be because without it could identify skills from tiny, behaviorally irrelevant differences near the origin.</li>
@@ -761,9 +761,9 @@ Functional anchor  → limits destructive drift once those behaviors emerge</cod
 <section id="some-lessons-learned-during-experiments" class="level2">
 <h2 class="anchored" data-anchor-id="some-lessons-learned-during-experiments">Some lessons learned during experiments</h2>
 <ol type="1">
-<li><strong>Reference quality matters.</strong> Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. Conversely, for BMD steering a frozen diffusion decoder, extensive BC training (e.g., 20k steps) over-specializes the decoder’s attractor manifold along the demonstration axes, causing held-out diagonal coverage to fall (<span class="math inline">\(3.12 \to 1.12\)</span> modes). A less specialized decoder prior leaves more reachable latent paths for downstream skill discovery.</li>
+<li><strong>Reference quality matters.</strong> Anchoring a weak BC policy preserves weak behavior. On the radius shift, improving the reference from 2,000 to 20,000 BC updates changed anchoring from failure to reliable four-mode coverage. Conversely, for BMD steering a frozen diffusion decoder, extensive BC training (e.g., 20k steps) over-specializes the decoder’s on sticking to the action distribution in BC demonstration direction, causing held out diagonal coverage to fall (<span class="math inline">\(3.12 \to 1.12\)</span> modes). A less specialized decoder prior leaves more reachable latent paths for downstream skill discovery.</li>
 <li><strong>Action entropy is not mode preservation.</strong> Local stochasticity can remain high while all trajectories belong to the same global behavioral mode. So no matter how much entropy bonus you gave you wont get better mode coverage.</li>
-<li><strong>Raw success can reward collapse.</strong> Mode balanced metrics and per mode attempt counts are necessary whenever several solutions are intended. Its easier to believe that we made the policy better if we define only success metrics and not properly define the mode coverage metrics.</li>
+<li><strong>Raw success can reward collapse.</strong> The policy might achieve high success by repeatedly using one easy solution while ignoring other valid solutions. If multiple behaviors are desired, measure we should measure success rate for each mode, number of attempts for each mode and total number of distinct modes covered.</li>
 </ol>
 </section>
 <section id="preserve-or-discover" class="level2">
@@ -828,7 +828,7 @@ Functional anchor  → limits destructive drift once those behaviors emerge</cod
 <h2 class="anchored" data-anchor-id="credits-and-related-work">Credits and related work</h2>
 <p>This study builds directly on four projects:</p>
 <ul>
-<li><strong>Behavioral Mode Discovery.</strong> Longhini, Emukpere, Renders, and Kim, <em><a href="https://behav-mod-dis.github.io/">Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies</a></em> (<a href="https://arxiv.org/abs/2605.11387">arXiv:2605.11387</a>). BMD provides the mutual-information mode-discovery objective reproduced and studied here.</li>
+<li><strong>Behavioral Mode Discovery.</strong> Longhini, Emukpere, Renders, and Kim, <em><a href="https://behav-mod-dis.github.io/">Behavioral Mode Discovery for Fine-tuning Multimodal Generative Policies</a></em> (<a href="https://arxiv.org/abs/2605.11387">arXiv:2605.11387</a>). BMD provides the mutual-information mode-discovery objective reproduced and studied here.Also the four goal env base.</li>
 <li><strong>Flow Q-Learning.</strong> Park, Li, and Levine, <em><a href="https://arxiv.org/abs/2502.02538">Flow Q-Learning</a></em>. FQL is the closest precedent for the shared-noise output-matching loss and its Wasserstein upper-bound interpretation, although it uses the loss for offline one-step policy distillation rather than online mode preservation.</li>
 <li><strong>Diffusion Steering Reinforcement Learning.</strong> Wagenmaker et al., <em><a href="https://arxiv.org/abs/2506.15799">Steering Your Diffusion Policy with Latent Space Reinforcement Learning</a></em>. DSRL supplies the frozen diffusion decoder and latent-noise steering formulation used by the diffusion experiments.</li>
 <li><strong>ReinFlow.</strong> Zhang et al., <em><a href="https://arxiv.org/abs/2505.22094">ReinFlow: Fine-tuning Flow Matching Policy with Online Reinforcement Learning</a></em>. ReinFlow supplies the learnable-noise flow-chain PPO formulation used by the direct flow-policy experiments and contains a related paired-output regularizer.</li>
