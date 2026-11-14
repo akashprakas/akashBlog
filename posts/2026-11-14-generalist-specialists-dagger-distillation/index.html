@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Akash Prakash">
+<meta name="dcterms.date" content="2026-11-14">
+<meta name="description" content="A two-task robot pilot: specialise a shared flow-matching policy with RL, then compare offline imitation and student-driven DAgger to consolidate the improvements.">
+
+<title>From Generalist to Specialists and Back: Offline Distillation vs DAgger – Akash’s Blog</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-9bbf5fa004a0676d7f26111dc3fdfdb2.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark-a80805fb9204df0454a85aec670eb5fe.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-9bbf5fa004a0676d7f26111dc3fdfdb2.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-616a4e43882042a26ab2829fde8ad09a.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-dark-7e0785f807df18914d020c6e517de4c3.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../site_libs/bootstrap/bootstrap-616a4e43882042a26ab2829fde8ad09a.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Akash’s Blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Posts</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/akashprakas"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/akashaapz"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">From Generalist to Specialists and Back: Offline Distillation vs DAgger</h1>
+                  <div>
+        <div class="description">
+          A two-task robot pilot: specialise a shared flow-matching policy with RL, then compare offline imitation and student-driven DAgger to consolidate the improvements.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">robotics</div>
+                <div class="quarto-category">reinforcement-learning</div>
+                <div class="quarto-category">flow-matching</div>
+                <div class="quarto-category">distillation</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Akash Prakash </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">November 14, 2026</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#could-one-policy-get-both-tasks-off-the-ground" id="toc-could-one-policy-get-both-tasks-off-the-ground" class="nav-link active" data-scroll-target="#could-one-policy-get-both-tasks-off-the-ground">Could one policy get both tasks off the ground?</a></li>
+  <li><a href="#would-specialisation-improve-that-shared-start" id="toc-would-specialisation-improve-that-shared-start" class="nav-link" data-scroll-target="#would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</a></li>
+  <li><a href="#should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" id="toc-should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" class="nav-link" data-scroll-target="#should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts">Should the generalist watch the teachers, or learn on its own attempts?</a></li>
+  <li><a href="#what-happened-when-the-student-drove" id="toc-what-happened-when-the-student-drove" class="nav-link" data-scroll-target="#what-happened-when-the-student-drove">What happened when the student drove?</a></li>
+  <li><a href="#was-this-a-benefit-of-student-state-coverage-or-something-else" id="toc-was-this-a-benefit-of-student-state-coverage-or-something-else" class="nav-link" data-scroll-target="#was-this-a-benefit-of-student-state-coverage-or-something-else">Was this a benefit of student-state coverage, or something else?</a></li>
+  <li><a href="#what-did-the-detour-actually-teach-us" id="toc-what-did-the-detour-actually-teach-us" class="nav-link" data-scroll-target="#what-did-the-detour-actually-teach-us">What did the detour actually teach us?</a>
+  <ul class="collapse">
+  <li><a href="#evidence-and-protocol" id="toc-evidence-and-protocol" class="nav-link" data-scroll-target="#evidence-and-protocol">Evidence and protocol</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+
+<blockquote class="blockquote">
+<p>Experiment evidence: <a href="evaluations.json">saved evaluations</a> and <a href="p2-protocol.txt">P2 protocol</a>.</p>
+</blockquote>
+<p>The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?</p>
+<p>There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?</p>
+<p>The second question has two plausible answers: watch the teachers perform, or let the student act and ask the teachers what they recommend along the way. We tested both.</p>
+<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> That comparison was planned but not run.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="pipeline.svg" class="img-fluid figure-img"></p>
+<figcaption>A1 shared BC becomes two A2 specialists. Their labels train an A3 or A4 student initialised from A1.</figcaption>
+</figure>
+</div>
+<section id="could-one-policy-get-both-tasks-off-the-ground" class="level2">
+<h2 class="anchored" data-anchor-id="could-one-policy-get-both-tasks-off-the-ground">Could one policy get both tasks off the ground?</h2>
+<p>First, a common starting policy had to work on both Robomimic tasks. Single-task sanity runs (A0) checked the setup, but the specialist pipeline would start from shared BC, A1.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 23%">
+<col style="width: 17%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>Goal</th>
+<th style="text-align: right;">State dimensions</th>
+<th>Action chunk</th>
+<th style="text-align: right;">Episode limit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Square MH</td>
+<td>Place a square nut onto a peg</td>
+<td style="text-align: right;">23</td>
+<td>4 consecutive 7-D actions</td>
+<td style="text-align: right;">400 steps</td>
+</tr>
+<tr class="even">
+<td>Tool Hang PH</td>
+<td>Assemble a stand/frame and hang a tool</td>
+<td style="text-align: right;">53</td>
+<td>8 consecutive 7-D actions</td>
+<td style="text-align: right;">1,000 steps</td>
+</tr>
+</tbody>
+</table>
+<p>MH uses multi-human demonstrations of mixed proficiency; PH uses proficient-human demonstrations. Cross-task scores are not a controlled comparison of difficulty.</p>
+<p>For A1, we used behaviour cloning (BC): imitate the human demonstrations. Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.</p>
+<p>Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its <strong>143 inputs</strong> are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.</p>
+<p>Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.</p>
+<p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation; the mechanism remains open.</p>
+<p>A1 reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates, clearing the threshold of 45% on both in one evaluation. We had a starting point, not a finished generalist. Could RL improve it?</p>
+</section>
+<section id="would-specialisation-improve-that-shared-start" class="level2">
+<h2 class="anchored" data-anchor-id="would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</h2>
+<p>Rather than discard A1’s learned representation, A2 exports task-specific copies and fine-tunes each independently with OGPO reinforcement learning for <strong>one million environment steps</strong>.</p>
+<p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias:</p>
+<pre class="text"><code>Before: other weighted inputs + task_weight * 1 + old_bias
+After:  other weighted inputs + (old_bias + task_weight)</code></pre>
+<p>Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain A1’s trunk, but <strong>stop sharing weights during RL</strong>. The audited original exporter performs this surgery; the local shared-evaluation helper alone does not.</p>
+<p>Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the <strong>minimum of two randomly sampled heads, with replacement</strong>, determines its score. The best candidate wins: 80 head-values per query, often batched.</p>
+<p>The actor-only evaluations suggested that the detour had helped:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Reference policy</th>
+<th style="text-align: right;">Square SDE</th>
+<th style="text-align: right;">Tool Hang SDE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A1 shared start, 230k updates</td>
+<td style="text-align: right;">42/64 = 65.6%</td>
+<td style="text-align: right;">34/64 = 53.1%</td>
+</tr>
+<tr class="even">
+<td>A2 specialists, critic-free</td>
+<td style="text-align: right;">57/64 = 89.1%</td>
+<td style="text-align: right;">58/64 = 90.6%</td>
+</tr>
+<tr class="odd">
+<td>Long BC, fresh run to 500k updates</td>
+<td style="text-align: right;">19/64 = 29.7%</td>
+<td style="text-align: right;">58/64 = 90.6%</td>
+</tr>
+</tbody>
+</table>
+<p>Then a control complicated the story. Fresh shared BC trained to 500k also reached <strong>90.6% on Tool Hang</strong>, but only 29.7% on Square. The specialist’s Tool Hang gain over A1@230k did not establish that RL was necessary; that starting checkpoint was under-trained.</p>
+<p>Could the teachers advise a struggling student? The snapshot audit (G2) found advantages mainly at early points in episodes the student later failed. It tested single-sample teacher takeover, not individual label quality: provisional encouragement, not a guarantee.</p>
+<p>SDE uses EMA weights and stochastic integration; ODE uses online weights without additional integration noise. Both start from Gaussian noise and take ten integration steps, so their difference does not isolate noise.</p>
+</section>
+<section id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" class="level2">
+<h2 class="anchored" data-anchor-id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts">Should the generalist watch the teachers, or learn on its own attempts?</h2>
+<p>Two specialists were not the final goal. We started a shared student from <strong>A1@230k</strong>, with the fixed specialists supplying action targets. Their weights are <strong>not merged</strong>.</p>
+<p><strong>A3</strong> lets the teachers drive and records their state-chunk pairs. <strong>A4</strong> lets the student drive, asking the matching teacher for a label at each decision-state while executing its own chunk.</p>
+<p>Why might that matter? A student’s errors can lead to states a capable teacher rarely visits. More teacher demonstrations might not cover them; DAgger puts advice there. That motivates the experiment, but does not establish the cause of any gain.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="collection.svg" class="img-fluid figure-img"></p>
+<figcaption>A3 executes teacher chunks. A4 executes student chunks and saves the teacher’s recommendation at the same state.</figcaption>
+</figure>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Collection/training choice</th>
+<th>A3: offline distillation</th>
+<th>A4: routed DAgger</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Who acts in the simulator?</td>
+<td>Teacher</td>
+<td>Current student’s EMA actor, single-sample SDE</td>
+</tr>
+<tr class="even">
+<td>Who supplies target chunks?</td>
+<td>Matching task’s fixed specialist</td>
+<td>Matching task’s fixed specialist</td>
+</tr>
+<tr class="odd">
+<td>When do labels arrive?</td>
+<td>Full dataset before training</td>
+<td>Roughly one quarter before each of four rounds</td>
+</tr>
+<tr class="even">
+<td>Which examples are retained?</td>
+<td>All pairs in the chosen prefix, including failures</td>
+<td>All labelled states, including failed or budget-cut episodes</td>
+</tr>
+<tr class="odd">
+<td>Human demos mixed into distillation?</td>
+<td>No; teacher-labelled data only</td>
+<td>No; teacher-labelled data only</td>
+</tr>
+<tr class="even">
+<td>Student updates per run</td>
+<td>20,000</td>
+<td>Four blocks of 5,000</td>
+</tr>
+</tbody>
+</table>
+<p>“Routed” is a task-ID lookup. A4 <strong>never executes the teacher’s chunk</strong>. Each round collects pairs, then trains on the accumulated pool; it is not one episode. Both students use supervised flow matching, not RL reward updates. Labels do not guarantee success.</p>
+<p>To compare these choices, we counted teacher queries. <strong>One query returns one labelled chunk at one state</strong>, not one scalar action or one episode:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Budget per task</th>
+<th style="text-align: right;">Square pairs</th>
+<th style="text-align: right;">Tool Hang pairs</th>
+<th style="text-align: right;">Student gradient updates</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q1, approximately 2k</td>
+<td style="text-align: right;">1,998</td>
+<td style="text-align: right;">1,983</td>
+<td style="text-align: right;">20,000</td>
+</tr>
+<tr class="even">
+<td>Q2, approximately 8k</td>
+<td style="text-align: right;">7,998</td>
+<td style="text-align: right;">7,969</td>
+<td style="text-align: right;">20,000</td>
+</tr>
+<tr class="odd">
+<td>Q3, approximately 32k</td>
+<td style="text-align: right;">31,980</td>
+<td style="text-align: right;">31,994</td>
+<td style="text-align: right;">20,000</td>
+</tr>
+</tbody>
+</table>
+<p>Q1 therefore means roughly 2k pairs <strong>for each task</strong>, or 4k combined, not 2k split between them.</p>
+<p>A3 uses nested whole-episode prefixes; A4 matches their counts, cutting the last episode if needed. <strong>Each budget restarts from A1.</strong> Both use 256 pairs per task per update and Adam at learning rate 0.0003, with fresh moments.</p>
+<p>For LLM readers, A3 resembles teacher-response SFT; A4 resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, but losses differ. <a href="https://arxiv.org/abs/2306.13649">GKD</a> explicitly connects this idea to <a href="https://arxiv.org/abs/1011.0686">DAgger</a>.</p>
+</section>
+<section id="what-happened-when-the-student-drove" class="level2">
+<h2 class="anchored" data-anchor-id="what-happened-when-the-student-drove">What happened when the student drove?</h2>
+<p>The smallest-budget Square result was not a DAgger success story: A3 finished at <strong>43/64</strong>, while A4 fell to <strong>15/64</strong>, below the shared start. Expert advice on student-visited states was not enough for this recipe.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="budget-results.svg" class="img-fluid figure-img"></p>
+<figcaption>Saved SDE success counts and Wilson intervals for A3 and A4 across three separate query-budget runs per method.</figcaption>
+</figure>
+</div>
+<p><em>RTX 5090 results after 20,000 updates. Labels show successes on 64 reset seeds, 10000-10063, per task; bars show individual Wilson 95% intervals. Lines connect independent budget runs, not continued training.</em></p>
+<p>With more labels, the Square ranking changed. At Q3, DAgger reached <strong>56/64</strong>, versus offline’s <strong>51/64</strong>.</p>
+<p>Tool Hang resisted a simple “offline first, DAgger later” rule: A4 was ahead at Q1, behind at Q2, and ahead at Q3. At the largest budget, the student-driven recipe had higher point estimates on both tasks:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Task, Q3 single-sample SDE</th>
+<th style="text-align: right;">A3: offline</th>
+<th style="text-align: right;">A4: DAgger</th>
+<th style="text-align: right;">Observed A4 minus A3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Square</td>
+<td style="text-align: right;">51/64 = 79.7%</td>
+<td style="text-align: right;">56/64 = 87.5%</td>
+<td style="text-align: right;">+7.8 percentage points</td>
+</tr>
+<tr class="even">
+<td>Tool Hang</td>
+<td style="text-align: right;">43/64 = 67.2%</td>
+<td style="text-align: right;">49/64 = 76.6%</td>
+<td style="text-align: right;">+9.4 percentage points</td>
+</tr>
+</tbody>
+</table>
+<p>Did that complete the round trip? Square A4 was one episode below critic-free A2’s 57/64, but below the critic-guided teacher’s <strong>62/64</strong>. Tool Hang A4 remained below both the specialist and long BC at 58/64.</p>
+<p>The shared student makes <strong>zero critic calls at deployment</strong>. That is a structural saving, not a measured latency speedup or evidence of teacher equivalence.</p>
+<p>Both Q3 comparisons have overlapping marginal intervals. Overlap is not a test of the difference; the copied summaries lack per-episode outcomes for a paired test. The 64 evaluation seeds are not independent training runs, so retraining variability remains unknown. Equal queries also do not mean equal wall-clock cost.</p>
+</section>
+<section id="was-this-a-benefit-of-student-state-coverage-or-something-else" class="level2">
+<h2 class="anchored" data-anchor-id="was-this-a-benefit-of-student-state-coverage-or-something-else">Was this a benefit of student-state coverage, or something else?</h2>
+<p>DAgger may have learned to recover where the student wandered. But another difference complicates that explanation: <strong>when data arrives and how often it is reused</strong>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="dagger-rounds.gif" class="img-fluid figure-img"></p>
+<figcaption>Schematic of A4-Q1’s four collect-aggregate-train rounds and cumulative per-task pools, not a robot rollout.</figcaption>
+</figure>
+</div>
+<p><em>Schematic, not a robot rollout. Exact counts come from the saved A4-Q1 run. <a href="dagger-rounds.svg">Static alternative</a>.</em></p>
+<p>A3 has its entire dataset before the first update. A4 receives roughly one quarter before each 5,000-update block. At Q1, that means training first on just 499 Square pairs:</p>
+<pre class="text"><code>5,000 updates * 256 samples / 499 pairs = about 2,565 draws per pair</code></pre>
+<p>Those early pairs remain available in later rounds. A first-round Square pair gets about <strong>5,343 expected draws</strong> over the run; one arriving in the last round gets about <strong>641</strong>. Adam and EMA state also carry forward.</p>
+<p>Overfitting is plausible, not established. A schedule-matched offline control would release A3’s data in four stages too. Without it, “DAgger fixed covariate shift” is too strong: state source and data-arrival schedule changed together.</p>
+</section>
+<section id="what-did-the-detour-actually-teach-us" class="level2">
+<h2 class="anchored" data-anchor-id="what-did-the-detour-actually-teach-us">What did the detour actually teach us?</h2>
+<p>On Square, the shared start produced RL specialists whose actor-level performance was largely recovered by the larger-budget DAgger student. Tool Hang told a more cautious story: strong BC alone and incomplete consolidation.</p>
+<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds and schedule-matched controls are the next questions, not stronger claims from these curves.</p>
+<section id="evidence-and-protocol" class="level3">
+<h3 class="anchored" data-anchor-id="evidence-and-protocol">Evidence and protocol</h3>
+<ul>
+<li><a href="p2-protocol.txt">P2 protocol and amendments</a>, especially the long-BC control (plain-text Markdown).</li>
+<li><a href="evaluations.json">Saved evaluations and accounting</a>: A1 at 230k and 500k, both A2 specialists, and A3/A4 at Q1, Q2 and Q3. This bundle preserves the recorded counts, intervals and round statistics; machine-specific paths are omitted.</li>
+<li>In a separate CPU execution, device and teacher-restore path changed together. Label mismatch was observed, but its causal role was not isolated.</li>
+<li>An extra-BC CPU control resumed A1@230k for 20k demo-only updates: 34/64 Square and 35/64 Tool Hang SDE. This is separate from long BC; device differs and raw evaluation is not copied.</li>
+</ul>
+<p>The SVG plot and animation were generated directly from the source project’s saved JSON, not digitised from reports. No robot training was rerun to produce these figures.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/akashprakas\.github\.io\/akashBlog\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

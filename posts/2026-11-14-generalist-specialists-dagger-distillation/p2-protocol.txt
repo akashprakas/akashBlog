@@ -1,0 +1,254 @@
+# P2 low-dim study: consolidating RL specialists into one policy (spec, frozen 2026-10-10; amended 2026-10-19, see §9)
+
+Small, controlled version of the P2 capstone (plan.md §4.4b). It runs in robomimic low-dim with the official JAX
+OGPO_public code. SmolVLA/LIBERO is the confirmation step, done only if this study gives a clear result.
+
+**Claim:** a controlled comparison of consolidation strategies. No novelty claim until the §8 prior-art pass is done.
+
+## 1. Tasks and data
+
+| | Square MH | Tool Hang PH |
+|---|---|---|
+| env name (OGPO) | `square-mh-low_dim` | `tool_hang-ph-low_dim` |
+| obs keys | eef_pos 3, eef_quat 4, gripper_qpos 2, object 14 | same, object 44 |
+| obs dim | **23** | **53** |
+| action dim | 7 | 7 |
+| demos / transitions | 300 / 80,731 | 200 / 95,962 |
+| episode limit | 400 | 1000 |
+| chunk h executed | 4 | 8 |
+| γ (per env step; γ^h per chunk) | 0.99 | 0.999 |
+
+- The dims and counts come from reading the hdf5 files on 2026-10-10. The episode limits come from `envs/robomimic_utils.py`, and h/γ from `scripts/ogpo/{square,toolhang}.sh`.
+- Datasets: HF `robomimic/robomimic_datasets` v1.5, stored at `/local/mnt/workspace/akasprak/robomimic/<task>/<type>/low_dim_v15.hdf5`.
+  - sha256 square `da7dee0b…d05311`, tool_hang `c5cb01b1…a8f4`; both match the HF LFS oids.
+  - Use `ROBOMIMIC_DATASET_ROOT=/local/mnt/workspace/akasprak/robomimic`.
+
+## 2. Policy and interfaces (the shared policy)
+
+- **Network:** OGPO's MLP flow actor, plus a one-hot task ID (2-D) input.
+- **Observations:** zero-padded to 53, with a per-task obs normalizer fitted on that task's demos.
+  - The padding and normalization are tested by a unit check: padded Square obs must give the same normalized values in the real 23 dims.
+- **Chunk interface:** a shared trunk with one action head per task.
+  - Square head: 4×7. Tool Hang head: 8×7.
+  - The critic for each task sees only that task's executed chunk.
+  - No 8-wide Square output with masking: it would double the critic's action dim and break comparability with the published h=4 config.
+- **Specialists:** both start as clones of the shared BC checkpoint. Each runs OGPO+CA on its own task with that task's official hyperparameters (h, γ, critic depth 4×512 / 5×512, start_training, success-buffer flags).
+- **Teacher:** OGPO actor + best-of-8 SDE + critic argmax (OGPO's eval mode).
+  - The label for a state is the **selected** chunk.
+  - The actor alone (no critic) is also evaluated.
+
+## 3. Arms
+
+| id | arm | init | env steps |
+|---|---|---|---|
+| A0 | official per-task BC → OGPO, Square only (sanity reference vs the published curve) | per-task BC | official |
+| A1 | shared multitask BC | — | 0 |
+| A2 | specialist bank (route by task ID to the specialist) | A1 | S per task |
+| A3 | offline student: task-balanced teacher rollouts (selected chunks), demos kept as a separate mixture source, flow-matching loss | A1 | S·2 + C |
+| A4 | routed DAgger student: same as A3 in data mix, loss, init and steps, but labels come from the teacher on student-visited states | A1 | S·2 + C |
+| A5 | joint multitask OGPO: per-task critic heads, task-balanced replay, one success buffer per task, per-task h/γ | A1 | S·2 + C |
+
+- S is the specialist env budget per task; C is the collection budget.
+- A3 and A4 use the same teacher-query budget Q. A5 uses the same total env budget as A2 + collection.
+
+**BC stopping across two tasks (A1):**
+- Stop when both tasks reach SDE best-of-8 success ≥ 45%, the official `clip_bc_threshold`, checked at `eval_interval_bc`.
+- Otherwise stop at the official `bc_pi_steps` = 500k.
+- Record the per-task success at the stop.
+
+## 4. Evaluation (identical for every arm)
+
+- Each checkpoint is reported in three modes:
+  - (i) deterministic ODE;
+  - (ii) best-of-8 SDE without a critic (uniform pick);
+  - (iii) best-of-8 + critic argmax, for arms with a critic (A0, A2, A5).
+- Students are compared to the teacher in (i) and (ii). Mode (iii) is reported only as the teacher's ceiling.
+- Episodes: 64 per task per checkpoint on the 5090. Official is 32 envs × 2; we use 8 × 8 or 4 × 16 (host RAM, §6). `evaluation.py:488-491` seeds round r with `global_step + r·n_eval_envs`, so a different env/episode split gives a different seed set. Use the same split (8 × 8) for every arm; eval seeds are then the same set per task for every arm.
+- Report the Wilson 95% CI per task. Per-seed results are kept; claims are made at the seed level (≥3 seeds).
+
+## 5. Gates
+
+| stage | gate |
+|---|---|
+| 2 smoke | no OOM, no sustained swap; peak VRAM / host RAM / compile time / it/s recorded → choose box |
+| 3 shared BC | both tasks ≥ ~45% in mode (ii) at the stop (usable competence) |
+| 4 specialists | 1 seed for debugging, then 3 seeds; mean gain over A1 in mode (iii) with CIs that don't overlap on ≥1 task (= G1) |
+| 6 recovery | teacher success from saved student-failure states (robosuite `get_state`/`set_state`) > student's own (= G2) |
+
+- Stage 4 saves the full teacher: actor, critics, normalizers, and the replay and success buffers.
+
+## 6. Budget (stage 2 measured on the 5090, 2026-10-10; logs in `smoke/results/gpu_*` on that box)
+
+- **Measured (user-reported, `gpu_smoke.sh`, all 4 stages exit 0), with `jax_frac` 0.45 and 4 eval envs:**
+  - BC: Square ~717–813 it/s, Tool Hang ~693 it/s.
+  - Online: Square ~33–35 it/s, Tool Hang ~29–40 it/s. These rates came from short runs (6k / 4k steps) with tiny evals (4 envs × 1 episode). They are not yet the rate with the full 64-episode eval.
+  - Peak VRAM 15.2 GB, which is the preallocation at `jax_frac` 0.45.
+  - Peak host RSS: 17.1 GB (Square), 17.0 GB (Tool Hang).
+  - Checkpoint: 263/263 leaves identical; ODE, SDE and BoN actions bitwise equal after reload.
+- **Official schedules:**
+  - BC: 500k steps, or stop early at 45% SDE success. At ~750 it/s that is ≤ 12 min.
+  - Online: Square 2M steps, Tool Hang 2M in `toolhang.sh` (3M in paper Table 5).
+- **Per-seed online time at the measured rates, before eval overhead:** Square 2M ≈ 16 h; Tool Hang 2M ≈ 14–19 h (3M ≈ 21–29 h).
+- **Core runs:** A0 ×1 + specialists 2×3 + A5 ×3 = **10 RL runs**.
+  - A5 trains both tasks, so ≈ 2× one specialist.
+  - Serial total ≈ 16 + 3·16 + 3·17 + 3·33 ≈ 210 h ≈ 9 days of GPU, plus eval overhead and students.
+- **Runs are serial:** 17 GB host RSS per run on a ~30 GB host means two runs can't share the box.
+- **First pass at 1M online steps** (decided 2026-10-10): half the official 2M, Square ≈ 8 h/seed before eval. The LR schedules don't read online_steps, so a 1M run is exactly the first half of a 2M run; relaunching with the same tag and `--online_steps=2000000` resumes from the rolling backup. Launcher: `runs/run_ogpo.sh`.
+- **Eval workers:** use 4 (at most 8), not 32. The 64 episodes of §4 are then 4 envs × 16 or 8 × 8 sequential rounds. Measure the eval wall time on the first long run (A0).
+
+## 7. Stage 2 smoke test (this box, all under the systemd-run MemoryMax cap, one process)
+
+1. `uv sync --extra cuda13 --extra robomimic` in `OGPO_public`. It uses robosuite ≥1.5, a separate env from the LIBERO conda env (robosuite 1.4.0).
+2. JAX sees the GPU; MuJoCo EGL renders/steps; both datasets load through `envs/robomimic_utils.get_dataset`.
+3. Square: a short BC run and a short online run with 4 eval envs, logging off. Record:
+   - peak VRAM;
+   - peak host RAM;
+   - first-step compile time;
+   - steady-state it/s for BC and online;
+   - checkpoint save → reload → the same eval actions.
+4. Tool Hang: env construction and dataset load, plus a few hundred online steps for it/s (its 1000-step episodes are slower).
+5. Check `env.sim.get_state()` / `set_state` through OGPO's wrapper (needed for G2).
+
+## 8. Prior-art pass (bounded, ~2 h, before any claim)
+
+- Papers: Policy Distillation (Rusu 2015), Actor-Mimic (Parisotto 2015), **Distilling Policy Distillation (Czarnecki
+  2019; compares teacher- vs student-driven distillation directly, the closest to A3 vs A4)**, Kickstarting (Schmitt 2018), Distral (Teh 2017), Divide-and-Conquer RL (Ghosh 2017), Learning by Cheating (Chen 2019), RLDG 2412.09858, CPC 2601.22475, RLinf-VLA 2510.06710, 2609.28838.
+- For each, one line: what it distills, from what teacher, whether it compares offline vs on-policy labels at a matched budget, and whether it includes joint RL at a matched env budget.
+
+## 9. Amendment 2026-10-19 (made before any A2 result exists)
+
+The text above is unchanged. Where §9 conflicts with it, §9 governs from this date.
+
+**Changes**
+1. **A1 observations (supersedes §2 "Observations").** A1 uses RAW observations (`--norm none`): zero-padded to 53 plus the one-hot task ID, no per-task standardiser.
+   - Reason: with per-task standardisation, Tool Hang's 6 near-constant dims (std 2.8e-4 to 1.7e-3) are divided by tiny numbers. `a1_s1` (standardised, 500k steps) scored Square SDE 32/64 and Tool Hang 0/64.
+   - Controlled check: `th_std_s1` stayed at 0 at all 11 evaluations up to 110k (the run was incomplete when copied); `th_raw_s1` reached SDE 78.1% at 250k. This is a single seed. The gradient-norm numbers in the agent's report were not reproduced and are not used.
+   - Stock OGPO feeds raw observations for low-dim robomimic.
+2. **A1 recipe, recorded:** shared 5×512 GELU trunk, one head per task, constant lr 3e-4, global-norm clip 1000, EMA tau 0.005, 256 samples per task per step, evaluation seeds 10000 to 10063 (8 envs × 8 rounds) at every evaluation and for every arm.
+3. **Square specialist actor:** 5×512 (A1's trunk), not the official 4×512. The Square critic stays at the official 4×512, and all other Square and Tool Hang hyperparameters are official. A0 Square used the 4×512 actor, so A0 and A2 differ in actor depth on Square.
+4. **Stage-3 gate, primary:** both tasks ≥ 45% in mode (ii), a single critic-free SDE sample (same distribution as a uniform pick among 8). This is stricter than A0's BC-stage number, which used critic-guided best-of-8.
+5. **Teacher ceiling:** mode (iii), critic-guided best-of-8, is reported separately for A2 as the teacher ceiling. It is not a gate.
+6. **A2 entry point:** `runs/run_a2.sh` (export, then `run_ogpo.sh`) forces `--bc_pi_steps=0` and `--restore_actor_path`. The exporter folds the shared net into a plain OGPO `ActorVectorField` on raw observations (`shared_bc/export_specialist.py`; provenance in `<out>.json`).
+
+**A1 checkpoint of record:** `runs/a1_raw_s1/params_230000.pkl`, seed 1, stopped by the threshold at step 230,000.
+| mode | Square | Tool Hang |
+|---|---|---|
+| (ii) single SDE, EMA weights | 42/64 = 65.6%, Wilson [53.4, 76.1] | 34/64 = 53.1%, [41.1, 64.8] |
+| (i) ODE, online weights | 27/64 = 42.2%, [30.9, 54.4] | 20/64 = 31.3%, [21.2, 43.4] |
+
+Caveats: Tool Hang SDE was under 45% at every earlier check, so the gate was passed at a single evaluation. The "final" evaluation reuses the same weights and seeds. One seed.
+
+**Seeds (A2 onward):** the existing A1 seed 1 feeds A2 seed 1 only. A1 seeds 2 and 3 are trained only after both A2 smokes pass. Pipelines are then paired: A1 seed i initialises A2 seed i.
+
+**Smoke and baseline protocol**
+- Smokes: Tool Hang 50k and Square 20k online steps, each with `--preemption_backup_interval=10000` (the default 50k would write no checkpoint in a 20k run). Check: restore message, BC skipped, finite critic and actor losses, checkpoint written, same command resumes.
+- OGPO's automatic evaluation before the online phase measures single-sample SDE only (no ODE) and uses reset seeds 0 to 63, not 10000 to 10063. Its count need not equal A1's. It is a coarse sanity check only.
+- Step-zero parity uses a separate evaluator on the exported specialist, ODE and single SDE, with seeds 10000 to 10063. It should match the A1 table above within evaluation noise. A large gap means the export or the Square 5×512 override is wrong.
+
+**Still open:** the §8 prior-art pass; the novelty claim stays withheld until it is done.
+
+## 10. Amendment 2026-10-21 (seed-1 pilot first; extra seeds deferred)
+
+The text above is unchanged. Where §10 conflicts with it, §10 governs from this date.
+
+**Changes**
+1. **Seeds deferred.** A1 seeds 2 and 3 and A2 seeds 2 and 3 (about 16 h per specialist run) are not run before the student arms. A3, A4 and A5 are first built and run as a **seed-1 pilot**, using the seed-1 teachers (`a2_sq_s1`, `a2_th_s1`). Seeds 2 and 3 are run later, paired (A1 seed i → A2 seed i), and only if the pilot shows a result worth confirming.
+2. **No seed-level claim from the pilot.** SPEC §4 says claims are made at the seed level with at least 3 seeds. Pilot results are reported with Wilson intervals as single-seed observations and are not used to state any finding about A3 vs A4.
+3. **G1 is provisional.** G1 is read in the critic-free modes (ODE and single-sample SDE) because A1 has no critic, so mode (iii) cannot be computed for it. It is met on seed 1 only, on the fixed seeds 10000–10063, with non-overlapping Wilson intervals. It is not confirmed until three seeds exist. Mode (iii) stays the teacher ceiling.
+
+| task | A1 ODE | A2 ODE | A1 single SDE | A2 single SDE | A2 best-of-8 + critic |
+|---|---|---|---|---|---|
+| Square | 27/64 = 42.2% | 56/64 = 87.5% [77.2, 93.5] | 42/64 = 65.6% [53.4, 76.1] | 57/64 = 89.1% [79.1, 94.6] | 62/64 = 96.9% [89.3, 99.1] |
+| Tool Hang | 20/64 = 31.3% | 58/64 = 90.6% [81.0, 95.6] | 34/64 = 53.1% [41.1, 64.8] | 58/64 = 90.6% [81.0, 95.6] | 57/64 = 89.1% [79.1, 94.6] |
+
+These A2 numbers are as reported by the evaluation agent (`eval_teacher_spec.py`, `eval_spec_1000000.json` on the 5090). They were not independently re-run here.
+
+**Observations to carry forward**
+- Both seed-1 specialists dipped early and then recovered. Square critic-guided success went 71.9% (10k) → 1.6% (20k) → 14% (50k) → above 50% around 180k. Tool Hang went 46.9% (40k) → 0% (60k and 80k) → above 70% at 300k. The cause is untested; critics start from scratch (`bc_q_steps=0`). `q_warmup_steps` exists in the OGPO config but was not tried.
+- On Tool Hang, best-of-8 with the critic (89.1%) is no better than single SDE (90.6%), so for that task the A3/A4 "selected chunk" label may add little over the plain actor. Square shows +8 points, with overlapping intervals.
+- The A2 and A0 specialists end within noise of each other on both tasks. Square differs in actor depth (5×512 vs 4×512).
+
+**Pilot rules (to keep it comparable later)**
+- Report teacher queries, training pairs and extra environment steps separately for A3 and A4, and compare them at a query-matched and a pair-matched budget, as t07 recommends.
+- Each chunk label must be one real teacher plan from that state (the selected best-of-8 chunk).
+- The student is initialised from A1 seed 1.
+
+## 11. Prior-art pass result (2026-10-21; §8 done at a bounded level)
+
+Full table in `../prior_art.md` ("Added 2026-10-21"). Drafts: `PRIOR_ART_DRAFT.md` (Haiku agent, unverified quotes) and a second agent's reply (not saved; 4 of its 14 bibliographic records were wrong).
+
+- **Closest prior work: Multi-Teacher On-Policy Distillation for Flow-Based VLAs, arXiv 2610.21522** (abstract and HTML read). It compares student-state OPD with teacher-rollout SFT for several specialists into one flow-based student, matched in optimizer updates and collected episodes but not in env steps or teacher queries. The earlier statement that no found paper makes this comparison is withdrawn.
+- Next closest: Czarnecki 2019 (student- vs teacher-driven control; single teacher; optimisation steps) and Data-Efficient Multitask DAgger 2509.25466 (multi-expert DAgger; budget allocation, not label source).
+- **No novelty claim for A3 vs A4.** Any contribution is limited to what is measured here: a controlled low-dim setting, separate reporting of teacher queries / training pairs / env steps with query- and pair-matched comparisons, an RL-trained critic-guided teacher, G2 recovery, and the matched-budget joint arm A5.
+- Limits of this pass: HTML pages were read through a summarising fetch tool; CPC's last ~10k characters, Actor-Mimic, Distral, Divide-and-Conquer, Learning by Cheating, RLinf-VLA and 2609.28838 were not re-read by me; no systematic search was run. A fuller search is still open.
+
+## 12. Amendment 2026-10-21 (long-BC control; G1 restated per task)
+
+The text above is unchanged. Where §12 conflicts with it, §12 governs from this date. Source: `runs/a1_raw_500k_s1/` (`eval.jsonl`, `final_eval.json`).
+
+**Control run.** A1 raw, seed 1, same settings as `a1_raw_s1` except `--threshold 2.0` (early stop off), trained from scratch to 500k steps (not resumed from 230k). Evaluations every 10k, single-sample SDE on EMA weights, seeds 10000 to 10063. Checkpoints kept at 100k, 200k, 300k, 400k, 500k. Its early evaluations differ from `a1_raw_s1`'s (same seed, e.g. step 130k: Square 19/64 vs 22/64, Tool Hang 12/64 vs 8/64), so run-to-run noise is visible.
+
+| single-SDE successes out of 64, mean over window | Square | Tool Hang |
+|---|---|---|
+| 230k to 300k (8 evals) | 35.8 | 36.5 |
+| 310k to 400k (10 evals) | 27.0 | 49.8 |
+| 410k to 500k (10 evals) | 25.1 | 56.6 |
+
+Final at 500k: Square 19/64 = 29.7% [19.9, 41.8] (ODE and SDE); Tool Hang SDE 58/64 = 90.6% [81.0, 95.6], ODE 49/64 = 76.6%.
+
+**Findings (one seed; neighbouring evaluations differ by about 4 episodes)**
+1. Tool Hang: long BC reaches the A2 specialist's level (58/64, same seeds, same mode). The A2 gain over A1@230k on Tool Hang is therefore mostly an under-trained baseline.
+2. Square: success peaks around 230k to 300k and drifts down with more BC. The cause is untested (overfitting on 80k transitions vs. interference from the shared trunk).
+3. No single A1 checkpoint is best for both tasks.
+
+**Changes**
+1. **G1 is restated per task, as a seed-1 observation.**
+   - Square: A2 single SDE 57/64 = 89.1% [79.1, 94.6] vs. at most about 42/64 for any A1 checkpoint. Gain supported at seed 1, with non-overlapping intervals against the best checkpoint.
+   - Tool Hang: **not supported** against the 500k BC (58/64 vs. 58/64). Supported only against A1@230k, which is under-trained on this task.
+   - G1 as a two-task gate is not claimed. It remains provisional until three seeds exist (§10).
+2. **A1 for the pilot is `runs/a1_raw_s1/params_230000.pkl`** (the checkpoint of record), as in §9. It is the better Square start and is under-trained on Tool Hang. The A3/A4 report must state this and note that a 500k start would leave little to distil on Tool Hang.
+3. **Report both A1 references** wherever a gain over A1 is quoted: A1@230k and the best/longest-trained A1 for that task.
+
+## 13. Amendment 2026-10-22 (Stage 6 / G2 recovery results, seed 1)
+
+The text above is unchanged. Where §13 conflicts with it, §13 governs from this date. Sources: `runs/results/stage6/recovery_{square,toolhang}.json` (late branch points) and `runs/results/stage6_early/recovery_{square,toolhang}.json` (early branch points); script `stage6_recovery.py`, CPU, 64 episodes per task, seeds 10000 to 10063.
+
+**What was measured.** The A1@230k student ran from reset on the 64 seeds with a simulator snapshot saved at fixed steps. Episodes that never reached success are "failed episodes" (Square 25, Tool Hang 32). From each snapshot of a failed episode, the simulator was rewound twice: branch A, the student drives to the end of the episode (fresh noise); branch B, the teacher drives to the end. The teacher is the plain A2 actor in single-sample SDE mode (EMA weights), **not** the critic-selected best-of-8 labeller of A3/A4. Nothing is trained in this stage.
+
+**What a "failure state" is.** The only thing known about a snapshot is how its episode ended. A "failure state" is a state taken from an episode that failed later. It is not known to be a bad state. At early steps most are still fine, so the student's own "rescue" rate is inflated by states from which a different noise draw simply succeeds. It does not measure recovery from a mistake.
+
+| Branch step | Failure states | Student rescue | Teacher rescue | Paired diff [bootstrap 95% CI] | one-sided exact p |
+|---|---|---|---|---|---|
+| Square 20 | 25 | 8 | 18 | +40.0 [+16.0, +64.0] | 0.0065 |
+| Square 30 | 25 | 12 | 17 | +20.0 [-8.0, +48.0] | 0.133 |
+| Square 50 | 25 | 7 | 11 | +16.0 [-4.0, +36.0] | 0.145 |
+| Square 100 | 25 | 5 | 10 | +20.0 [-4.0, +44.0] | 0.090 |
+| Square 200 | 25 | 2 | 7 | +20.0 [0.0, +40.0] | 0.063 |
+| Square 300 | 25 | 1 | 2 | +4.0 [0.0, +12.0] | 0.500 |
+| Tool Hang 20 | 32 | 10 | 22 | +37.5 [+15.6, +59.4] | 0.0038 |
+| Tool Hang 50 | 32 | 15 | 22 | +21.9 [-3.1, +46.9] | 0.072 |
+| Tool Hang 70 | 32 | 12 | 21 | +28.1 [+3.1, +53.1] | 0.032 |
+| Tool Hang 100 | 32 | 11 | 20 | +28.1 [+9.4, +46.9] | 0.011 |
+| Tool Hang 250 | 32 | 8 | 13 | +15.6 [-3.1, +34.4] | 0.090 |
+| Tool Hang 500 | 32 | 3 | 3 | 0.0 [-9.4, +9.4] | 0.750 |
+| Tool Hang 750 | 32 | 1 | 0 | -3.1 [-9.4, 0.0] | 1.000 |
+
+Student from reset: 39/64 (Square), 32/64 (Tool Hang). Teacher from reset: 54/64 (84.4%) and 56/64 (87.5%). Branch steps are rounded up to the next chunk boundary (Square chunks 4 steps, Tool Hang 8).
+
+**Findings (one seed, one A1 checkpoint, one teacher mode)**
+1. The teacher does better than the student from states on failing trajectories, and the advantage is largest at early snapshots and fades with later ones (Square: +40 at step 20, +4 at step 300; Tool Hang: +37.5 at step 20, +28 at step 100, 0 at step 500).
+2. Four of the thirteen branch points reach one-sided p < 0.05 (Square 20; Tool Hang 20, 70, 100); none of the late points do. Thirteen tests were run and no multiple-comparison correction was applied. The consistency of the Tool Hang gain across steps 20 to 100 (+22 to +38 points) is stronger evidence than any single p-value.
+3. Late snapshots (Square 300; Tool Hang 500 and 750) are mostly unrecoverable for both policies and say little about label quality.
+
+**G2.** The SPEC-literal form (teacher rescues > student rescues) holds at 11 of 13 branch points (the exceptions are Tool Hang 500, a tie at 3 and 3, and Tool Hang 750, 0 against 1). The paired significance test holds at the points above. G2 is therefore supported at seed 1, mainly at early snapshots, and remains provisional until three seeds exist (§10).
+
+**What G2 does not show**
+- It does not show A4's labels are good. In G2 the teacher drives the whole remaining episode; in A4 the student drives and the teacher labels one chunk at a time.
+- The teacher's rescue rate (44 to 72% at early steps) is below its reset rate (84 to 88%), but the failure seeds were selected because the student failed on them, so this does not indicate poor labels.
+- It does not show the student was already in a bad state at the snapshot, or when the student started going wrong.
+- State restore is approximate, not bit-exact (`smoke/SMOKE_RESULT.md` item 7); observations after a restore are stale by about 1e-3.
+- The plain-actor teacher is not the critic-selected best-of-8 chunk. A best-of-8 teacher may rescue more, especially on Square, where best-of-8 added about 8 points over single SDE (Tool Hang: none).
+
+**Not done**
+- A test closer to A4's labels (student drives, teacher labels each visited state, measure how often and how much its chunk differs from the student's).
+- Labelling snapshots as healthy or doomed (e.g. whether the teacher can finish from them).

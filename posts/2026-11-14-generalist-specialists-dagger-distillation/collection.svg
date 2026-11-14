@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" width="1000" height="480" role="img" aria-labelledby="title desc" font-family="DejaVu Sans, sans-serif">
+  <title id="title">The same teacher labels, different drivers</title>
+  <desc id="desc">In A3 the teacher chunk is executed and labelled. In A4 the student's chunk is executed, while the specialist's chunk is only saved as a target. Both retain data from failed episodes. Recipe: scripts/03_collect_teacher_offline.py and scripts/05_train_routed_dagger.py. All arrows are schematic.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#53647a" />
+    </marker>
+  </defs>
+  <rect width="1000" height="480" fill="#f6f8fc" rx="18" />
+  <text x="35" y="40" fill="#17263c" font-size="25" font-weight="700" text-anchor="start">Same expert supervision. Different states in the dataset.</text>
+  <text x="35" y="68" fill="#53647a" font-size="16" font-weight="400" text-anchor="start">One query returns one labelled chunk: 4 actions on Square, 8 on Tool Hang.</text>
+  <rect x="30" y="92" width="455" height="310" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="257" y="125" fill="#2563eb" font-size="22" font-weight="700" text-anchor="middle">A3 | teacher drives</text>
+  <rect x="55" y="148" width="405" height="45" rx="8" fill="#f6f8fc" stroke="#d5dfe9" stroke-width="2" />
+  <text x="257" y="177" fill="#17263c" font-size="18" font-weight="400" text-anchor="middle">Current state</text>
+  <path d="M155 193 V222" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M360 193 V222" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <rect x="50" y="225" width="210" height="63" rx="9" fill="#f3f6fc" stroke="#2563eb" stroke-width="2" />
+  <rect x="280" y="225" width="185" height="63" rx="9" fill="#eef9f5" stroke="#087f74" stroke-width="2" />
+  <text x="155" y="251" fill="#2563eb" font-size="17" font-weight="700" text-anchor="middle">Teacher chunk</text>
+  <text x="155" y="275" fill="#53647a" font-size="14" font-weight="400" text-anchor="middle">EXECUTE in simulator</text>
+  <text x="372" y="251" fill="#087f74" font-size="17" font-weight="700" text-anchor="middle">Teacher chunk</text>
+  <text x="372" y="275" fill="#53647a" font-size="14" font-weight="400" text-anchor="middle">SAVE as target</text>
+  <path d="M155 288 V319" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M372 288 V319" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <text x="155" y="345" fill="#17263c" font-size="17" font-weight="400" text-anchor="middle">Next visited state</text>
+  <text x="372" y="345" fill="#17263c" font-size="17" font-weight="400" text-anchor="middle">Training pair</text>
+  <text x="257" y="382" fill="#2563eb" font-size="16" font-weight="700" text-anchor="middle">Collect once; then train</text>
+  <rect x="515" y="92" width="455" height="310" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="742" y="125" fill="#7c3aed" font-size="22" font-weight="700" text-anchor="middle">A4 | student drives</text>
+  <rect x="540" y="148" width="405" height="45" rx="8" fill="#f6f8fc" stroke="#d5dfe9" stroke-width="2" />
+  <text x="742" y="177" fill="#17263c" font-size="18" font-weight="400" text-anchor="middle">Current state</text>
+  <path d="M640 193 V222" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M845 193 V222" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <rect x="535" y="225" width="210" height="63" rx="9" fill="#f3f6fc" stroke="#7c3aed" stroke-width="2" />
+  <rect x="765" y="225" width="185" height="63" rx="9" fill="#eef9f5" stroke="#087f74" stroke-width="2" />
+  <text x="640" y="251" fill="#7c3aed" font-size="17" font-weight="700" text-anchor="middle">Student chunk</text>
+  <text x="640" y="275" fill="#53647a" font-size="14" font-weight="400" text-anchor="middle">EXECUTE in simulator</text>
+  <text x="857" y="251" fill="#087f74" font-size="17" font-weight="700" text-anchor="middle">Teacher chunk</text>
+  <text x="857" y="275" fill="#53647a" font-size="14" font-weight="400" text-anchor="middle">SAVE as target</text>
+  <path d="M640 288 V319" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M857 288 V319" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <text x="640" y="345" fill="#17263c" font-size="17" font-weight="400" text-anchor="middle">Next visited state</text>
+  <text x="857" y="345" fill="#17263c" font-size="17" font-weight="400" text-anchor="middle">Training pair</text>
+  <text x="742" y="382" fill="#7c3aed" font-size="16" font-weight="700" text-anchor="middle">Collect, aggregate, train; repeat</text>
+  <text x="500" y="433" fill="#53647a" font-size="16" font-weight="400" text-anchor="middle">A3: the two teacher chunks shown are the same selected chunk.</text>
+  <text x="500" y="459" fill="#53647a" font-size="16" font-weight="400" text-anchor="middle">A4: the teacher never takes over. The student can fail; the labels are still kept.</text>
+</svg>
