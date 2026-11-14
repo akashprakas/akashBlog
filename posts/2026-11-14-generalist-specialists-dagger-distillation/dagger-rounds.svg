@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 385" width="1000" height="385" role="img" aria-labelledby="title desc" font-family="DejaVu Sans, sans-serif">
+  <title id="title">A4-Q1 has four collection-and-training rounds</title>
+  <desc id="desc">Static alternative to the schematic GIF. Exact new queries, cumulative pools and update counts come from results/data/a4/a4_Q1_final_eval.json. Counts are pairs per task, not scalar actions or episodes.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#53647a" />
+    </marker>
+  </defs>
+  <rect width="1000" height="385" fill="#f6f8fc" rx="18" />
+  <text x="30" y="39" fill="#17263c" font-size="24" font-weight="700" text-anchor="start">A4-Q1: one run, four collection-and-training rounds</text>
+  <text x="30" y="68" fill="#53647a" font-size="16" font-weight="400" text-anchor="start">SCHEMATIC | exact saved counts | all student runs start from A1@230k</text>
+  <rect x="25" y="93" width="230" height="160" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="40" y="123" fill="#7c3aed" font-size="21" font-weight="700" text-anchor="start">Round 0</text>
+  <text x="40" y="154" fill="#17263c" font-size="15" font-weight="400" text-anchor="start">New: 499 Sq / 495 TH</text>
+  <text x="40" y="182" fill="#17263c" font-size="15" font-weight="700" text-anchor="start">Pool: 499 / 495</text>
+  <text x="40" y="214" fill="#53647a" font-size="14" font-weight="400" text-anchor="start">Updates after round:</text>
+  <text x="40" y="239" fill="#7c3aed" font-size="19" font-weight="700" text-anchor="start">5,000</text>
+  <rect x="270" y="93" width="230" height="160" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="285" y="123" fill="#7c3aed" font-size="21" font-weight="700" text-anchor="start">Round 1</text>
+  <text x="285" y="154" fill="#17263c" font-size="15" font-weight="400" text-anchor="start">New: 499 Sq / 495 TH</text>
+  <text x="285" y="182" fill="#17263c" font-size="15" font-weight="700" text-anchor="start">Pool: 998 / 990</text>
+  <text x="285" y="214" fill="#53647a" font-size="14" font-weight="400" text-anchor="start">Updates after round:</text>
+  <text x="285" y="239" fill="#7c3aed" font-size="19" font-weight="700" text-anchor="start">10,000</text>
+  <rect x="515" y="93" width="230" height="160" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="530" y="123" fill="#7c3aed" font-size="21" font-weight="700" text-anchor="start">Round 2</text>
+  <text x="530" y="154" fill="#17263c" font-size="15" font-weight="400" text-anchor="start">New: 499 Sq / 495 TH</text>
+  <text x="530" y="182" fill="#17263c" font-size="15" font-weight="700" text-anchor="start">Pool: 1,497 / 1,485</text>
+  <text x="530" y="214" fill="#53647a" font-size="14" font-weight="400" text-anchor="start">Updates after round:</text>
+  <text x="530" y="239" fill="#7c3aed" font-size="19" font-weight="700" text-anchor="start">15,000</text>
+  <rect x="760" y="93" width="230" height="160" rx="14" fill="white" stroke="#d5dfe9" stroke-width="2" />
+  <text x="775" y="123" fill="#7c3aed" font-size="21" font-weight="700" text-anchor="start">Round 3</text>
+  <text x="775" y="154" fill="#17263c" font-size="15" font-weight="400" text-anchor="start">New: 501 Sq / 498 TH</text>
+  <text x="775" y="182" fill="#17263c" font-size="15" font-weight="700" text-anchor="start">Pool: 1,998 / 1,983</text>
+  <text x="775" y="214" fill="#53647a" font-size="14" font-weight="400" text-anchor="start">Updates after round:</text>
+  <text x="775" y="239" fill="#7c3aed" font-size="19" font-weight="700" text-anchor="start">20,000</text>
+  <rect x="25" y="275" width="300" height="50" rx="10" fill="#f5f0ff" stroke="#7c3aed" stroke-width="2" />
+  <text x="175" y="307" fill="#7c3aed" font-size="20" font-weight="700" text-anchor="middle">Collect</text>
+  <rect x="355" y="275" width="300" height="50" rx="10" fill="#f5f0ff" stroke="#7c3aed" stroke-width="2" />
+  <text x="505" y="307" fill="#7c3aed" font-size="20" font-weight="700" text-anchor="middle">Aggregate</text>
+  <rect x="685" y="275" width="300" height="50" rx="10" fill="#f5f0ff" stroke="#7c3aed" stroke-width="2" />
+  <text x="835" y="307" fill="#7c3aed" font-size="20" font-weight="700" text-anchor="middle">Train</text>
+  <text x="500" y="358" fill="#53647a" font-size="16" font-weight="400" text-anchor="middle">Repeat the three phases each round. Pools are cumulative; teacher chunks are never executed.</text>
+</svg>

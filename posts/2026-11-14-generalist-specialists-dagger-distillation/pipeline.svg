@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" role="img" aria-labelledby="title desc" font-family="DejaVu Sans, sans-serif">
+  <title id="title">Generalist to specialists to generalist</title>
+  <desc id="desc">A1 shared BC is copied into two independently RL-trained A2 actors. Their labels train either an A3 or A4 shared student initialised from A1. The specialist weights are not merged. Input widths and export facts: explainer/src/source_audit.json; protocol: results/P2_SPEC.md.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#53647a" />
+    </marker>
+  </defs>
+  <rect width="1000" height="600" fill="#f6f8fc" rx="18" />
+  <text x="35" y="40" fill="#17263c" font-size="25" font-weight="700" text-anchor="start">One shared start. Two RL specialists. One shared student.</text>
+  <text x="35" y="68" fill="#53647a" font-size="16" font-weight="400" text-anchor="start">Architecture schematic, not a claim that the stages have equal cost.</text>
+  <path d="M680 139 H966 V493 H681" fill="none" stroke="#53647a" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrow)" />
+  <text x="808" y="111" fill="#355674" font-size="14" font-weight="400" text-anchor="middle">A1 weights initialise</text>
+  <text x="808" y="132" fill="#355674" font-size="14" font-weight="400" text-anchor="middle">the final student too</text>
+  <rect x="320" y="95" width="360" height="94" rx="14" fill="#edf3f9" stroke="#355674" stroke-width="2" />
+  <text x="500" y="124" fill="#355674" font-size="22" font-weight="700" text-anchor="middle">A1 | shared BC @230k</text>
+  <text x="500" y="150" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">Human demonstrations from both tasks</text>
+  <text x="500" y="174" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">Shared trunk + two task-specific heads</text>
+  <path d="M420 189 V214 H260 V249" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M580 189 V214 H740 V249" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <text x="500" y="235" fill="#53647a" font-size="16" font-weight="400" text-anchor="middle">Export copies; preserve each task's initial function</text>
+  <rect x="60" y="252" width="400" height="122" rx="14" fill="#eef9f5" stroke="#087f74" stroke-width="2" />
+  <text x="260" y="284" fill="#087f74" font-size="22" font-weight="700" text-anchor="middle">A2 | Square specialist</text>
+  <text x="260" y="312" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">83-input actor; only its own task head</text>
+  <text x="260" y="339" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">Independent RL: 1M environment steps</text>
+  <text x="260" y="361" fill="#53647a" font-size="15" font-weight="400" text-anchor="middle">New critics; actor starts from A1</text>
+  <rect x="540" y="252" width="400" height="122" rx="14" fill="#eef9f5" stroke="#087f74" stroke-width="2" />
+  <text x="740" y="284" fill="#087f74" font-size="22" font-weight="700" text-anchor="middle">A2 | Tool Hang specialist</text>
+  <text x="740" y="312" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">141-input actor; only its own task head</text>
+  <text x="740" y="339" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">Independent RL: 1M environment steps</text>
+  <text x="740" y="361" fill="#53647a" font-size="15" font-weight="400" text-anchor="middle">New critics; actor starts from A1</text>
+  <path d="M260 374 V405 H440 V439" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <path d="M740 374 V405 H560 V439" fill="none" stroke="#53647a" stroke-width="2.5" marker-end="url(#arrow)" />
+  <text x="500" y="395" fill="#087f74" font-size="16" font-weight="700" text-anchor="middle">Transfer action labels, NOT specialist weights</text>
+  <rect x="320" y="442" width="360" height="106" rx="14" fill="#f5f0ff" stroke="#7c3aed" stroke-width="2" />
+  <text x="500" y="473" fill="#7c3aed" font-size="21" font-weight="700" text-anchor="middle">A3 OR A4 | shared student</text>
+  <text x="500" y="501" fill="#17263c" font-size="16" font-weight="400" text-anchor="middle">Both teachers supervise one actor</text>
+  <text x="500" y="527" fill="#17263c" font-size="15" font-weight="400" text-anchor="middle">Shared actor; no deployment critics</text>
+  <text x="500" y="581" fill="#53647a" font-size="16" font-weight="400" text-anchor="middle">A2 actors stop sharing weights after export. Teachers stay fixed during distillation.</text>
+</svg>
