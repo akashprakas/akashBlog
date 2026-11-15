@@ -39,48 +39,48 @@ As the first step of generalist we used behaviour cloning (BC). Its flow-matchin
 
 Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its **143 inputs** are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.
 
-![One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head. Static architecture diagram exported from the explainer; layer sizes come from the code.](shared-architecture.svg){#fig-shared-architecture fig-alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs."}
+![One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head.](shared-architecture.svg){#fig-shared-architecture fig-alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs."}
 
 Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.
 
 The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation, the mechanism remains open.
 
-After shared BC training we  reached **65.6% Square and 53.1% Tool Hang SDE success** at 230k updates. We had a starting point, not a finished generalist. Could RL improve it?
+After shared BC training we  reached **65.6% Square and 53.1% Tool Hang SDE success** at 230k updates. We had a starting point, not a finished generalist. So the next step was to use RL to improve the current score.
 
 ## Would specialisation improve that shared start?
 
-Rather than discard A1's learned representation, A2 exports task-specific copies and fine-tunes each independently with OGPO reinforcement learning for **one million environment steps**.
+Rather than discard BC learned representation, in this RL generalist stage we  exports task-specific copies and fine-tunes each independently with OGPO for **one million environment steps**.
 
-Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias:
+Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias.(You need to fold the tag to the bias,can be seen in the code)
 
 ```text
 Before: other weighted inputs + task_weight * 1 + old_bias
 After:  other weighted inputs + (old_bias + task_weight)
 ```
 
-Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain A1's trunk, but **stop sharing weights during RL**. The audited original exporter performs this surgery; the local shared-evaluation helper alone does not.
+Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain BC's trunk, but **stop sharing weights during RL**. 
 
-Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the **minimum of two randomly sampled heads, with replacement**, determines its score. The best candidate wins: 80 head-values per query, often batched.
+Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the **minimum of two randomly sampled heads, with replacement**, determines its score. The best candidate wins, 80 head-values per query, often batched.
 
-The actor-only evaluations suggested that the detour had helped:
+The actor-only evaluations suggested that the RL speciliazation had helped:
 
 | Reference policy | Square SDE | Tool Hang SDE |
 |---|---:|---:|
-| A1 shared start, 230k updates | 42/64 = 65.6% | 34/64 = 53.1% |
-| A2 specialists, critic-free | 57/64 = 89.1% | 58/64 = 90.6% |
+| BC shared start, 230k updates | 42/64 = 65.6% | 34/64 = 53.1% |
+| RL specialists, critic-free | 57/64 = 89.1% | 58/64 = 90.6% |
 | Long BC, fresh run to 500k updates | 19/64 = 29.7% | 58/64 = 90.6% |
 
-Then a control complicated the story. Fresh shared BC trained to 500k also reached **90.6% on Tool Hang**, but only 29.7% on Square. The specialist's Tool Hang gain over A1@230k did not establish that RL was necessary; that starting checkpoint was under-trained.
+Then a control complicated the story. Fresh shared BC trained to 500k also reached **90.6% on Tool Hang**, but only 29.7% on Square. The specialist's Tool Hang gain over BC@230k did not establish that RL was necessary; that starting checkpoint was under-trained.
 
-Could the teachers advise a struggling student? The snapshot audit (G2) found advantages mainly at early points in episodes the student later failed. It tested single-sample teacher takeover, not individual label quality: provisional encouragement, not a guarantee.
+We tried to see if the specialiast can help the BC generalist by trying to evalute the failed BC runs using a specialist and see if it can recover and found that in earlier starting states of the trajectory it was able to recover , so it kind of give  a direction that speciliast could help the BC generalist policy improve.
 
 SDE uses EMA weights and stochastic integration; ODE uses online weights without additional integration noise. Both start from Gaussian noise and take ten integration steps, so their difference does not isolate noise.
 
 ## Should the generalist watch the teachers, or learn on its own attempts?
 
-Two specialists were not the final goal. We started a shared student from **A1@230k**, with the fixed specialists supplying action targets. Their weights are **not merged**.
+Two specialists were not the final goal. We started a shared student from **BC@230k**, with the fixed specialists supplying action targets. Their weights are **not merged**.
 
-**A3** lets the teachers drive and records their state-chunk pairs. **A4** lets the student drive, asking the matching teacher for a label at each decision-state while executing its own chunk.
+**In Offline distillation**  we lets the teachers drive and records their state-chunk pairs. **In On policy distillation with DAgger style dataset aggregation** lets the student drive, asking the matching teacher for a label at each decision-state while executing its own chunk.Collection follows the current student, while training also reuses labels from earlier student policies.
 
 Why might that matter? A student's errors can lead to states a capable teacher rarely visits. More teacher demonstrations might not cover them; DAgger puts advice there. That motivates the experiment, but does not establish the cause of any gain.
 
