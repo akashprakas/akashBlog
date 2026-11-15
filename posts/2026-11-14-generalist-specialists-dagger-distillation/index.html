@@ -365,11 +365,42 @@ ul.task-list li input[type="checkbox"] {
 <p>The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?</p>
 <p>There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?</p>
 <p>The second question has two plausible answers: watch the teachers perform which is similar to the SFT in llms , or let the student act and ask the teachers what they recommend along the way , which is similar to the On policy distillation . In this we tested both and compared the compute and data requirements.</p>
+<p>I use descriptive names for the models and methods below. The experiment IDs remain in the diagrams and evidence files so readers can connect the story to the recorded runs.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model or method</th>
+<th>Experiment ID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Shared behaviour-cloning (BC) generalist</td>
+<td>A1</td>
+</tr>
+<tr class="even">
+<td>Reinforcement-learning (RL) specialists</td>
+<td>A2</td>
+</tr>
+<tr class="odd">
+<td>Offline distillation, producing the <strong>offline student</strong></td>
+<td>A3</td>
+</tr>
+<tr class="even">
+<td>On-policy distillation (OPD) with DAgger-style dataset aggregation, producing the <strong>DAgger student</strong></td>
+<td>A4</td>
+</tr>
+</tbody>
+</table>
 <p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> I was a bit compute and time constrained.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="pipeline.svg" class="img-fluid figure-img"></p>
-<figcaption>A1 shared BC becomes two A2 specialists. Their labels train an A3 or A4 student initialised from A1.</figcaption>
+<figcaption>The shared BC generalist becomes two RL specialists. Their labels train either an offline student or a DAgger student, both initialised from the same BC generalist.</figcaption>
 </figure>
 </div>
 <section id="could-one-policy-get-both-tasks-off-the-ground" class="level2">
@@ -418,23 +449,23 @@ ul.task-list li input[type="checkbox"] {
 <img src="shared-architecture.svg" class="img-fluid figure-img" alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs.">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shared-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head. Static architecture diagram exported from the explainer; layer sizes come from the code.
+Figure&nbsp;1: One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head.
 </figcaption>
 </figure>
 </div>
 <p>Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.</p>
 <p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation, the mechanism remains open.</p>
-<p>After shared BC training we reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates. We had a starting point, not a finished generalist. Could RL improve it?</p>
+<p>After shared BC training we reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates. We had a starting point, not a finished generalist. So the next step was to use RL to improve the current score.</p>
 </section>
 <section id="would-specialisation-improve-that-shared-start" class="level2">
 <h2 class="anchored" data-anchor-id="would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</h2>
-<p>Rather than discard A1’s learned representation, A2 exports task-specific copies and fine-tunes each independently with OGPO reinforcement learning for <strong>one million environment steps</strong>.</p>
-<p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias:</p>
+<p>Rather than discard the BC generalist’s learned representation, we exported task-specific copies and fine-tuned each independently with OGPO reinforcement learning for <strong>one million environment steps</strong>, producing two RL specialists.</p>
+<p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias.(You need to fold the tag to the bias,can be seen in the code)</p>
 <pre class="text"><code>Before: other weighted inputs + task_weight * 1 + old_bias
 After:  other weighted inputs + (old_bias + task_weight)</code></pre>
-<p>Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain A1’s trunk, but <strong>stop sharing weights during RL</strong>. The audited original exporter performs this surgery; the local shared-evaluation helper alone does not.</p>
-<p>Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the <strong>minimum of two randomly sampled heads, with replacement</strong>, determines its score. The best candidate wins: 80 head-values per query, often batched.</p>
-<p>The actor-only evaluations suggested that the detour had helped:</p>
+<p>Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain the BC generalist’s trunk, but <strong>stop sharing weights during RL</strong>.</p>
+<p>Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the <strong>minimum of two randomly sampled heads, with replacement</strong>, determines its score. The best candidate wins, 80 head-values per query, often batched.</p>
+<p>The actor-only evaluations suggested that the RL speciliazation had helped:</p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -445,12 +476,12 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td>A1 shared start, 230k updates</td>
+<td>Shared BC generalist, 230k updates</td>
 <td style="text-align: right;">42/64 = 65.6%</td>
 <td style="text-align: right;">34/64 = 53.1%</td>
 </tr>
 <tr class="even">
-<td>A2 specialists, critic-free</td>
+<td>RL specialists, critic-free</td>
 <td style="text-align: right;">57/64 = 89.1%</td>
 <td style="text-align: right;">58/64 = 90.6%</td>
 </tr>
@@ -461,19 +492,19 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tr>
 </tbody>
 </table>
-<p>Then a control complicated the story. Fresh shared BC trained to 500k also reached <strong>90.6% on Tool Hang</strong>, but only 29.7% on Square. The specialist’s Tool Hang gain over A1@230k did not establish that RL was necessary; that starting checkpoint was under-trained.</p>
-<p>Could the teachers advise a struggling student? The snapshot audit (G2) found advantages mainly at early points in episodes the student later failed. It tested single-sample teacher takeover, not individual label quality: provisional encouragement, not a guarantee.</p>
+<p>Then a control complicated the story. Fresh shared BC trained to 500k also reached <strong>90.6% on Tool Hang</strong>, but only 29.7% on Square. The RL specialist’s Tool Hang gain over the BC generalist at 230k did not establish that RL was necessary; that starting checkpoint was under-trained.</p>
+<p>To test whether the RL specialists could help the BC generalist, we evaluated recovery from earlier snapshots of episodes the generalist later failed. Recovery at early snapshots gave provisional encouragement, not a guarantee that distillation would improve the student.</p>
 <p>SDE uses EMA weights and stochastic integration; ODE uses online weights without additional integration noise. Both start from Gaussian noise and take ten integration steps, so their difference does not isolate noise.</p>
 </section>
 <section id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" class="level2">
 <h2 class="anchored" data-anchor-id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts">Should the generalist watch the teachers, or learn on its own attempts?</h2>
-<p>Two specialists were not the final goal. We started a shared student from <strong>A1@230k</strong>, with the fixed specialists supplying action targets. Their weights are <strong>not merged</strong>.</p>
-<p><strong>A3</strong> lets the teachers drive and records their state-chunk pairs. <strong>A4</strong> lets the student drive, asking the matching teacher for a label at each decision-state while executing its own chunk.</p>
+<p>Two RL specialists were not the final goal. We started each shared student from <strong>the BC generalist’s 230k-update checkpoint</strong>, with the fixed specialists supplying action targets. Their weights are <strong>not merged</strong>.</p>
+<p><strong>Offline distillation</strong> lets the teachers drive and records their state-chunk pairs. <strong>On-policy distillation with DAgger-style dataset aggregation</strong>, shortened to <strong>DAgger</strong> below, lets the student drive, asking the matching teacher for a label at each decision-state while executing its own chunk. Collection follows the current student, while training also reuses labels from earlier student policies.</p>
 <p>Why might that matter? A student’s errors can lead to states a capable teacher rarely visits. More teacher demonstrations might not cover them; DAgger puts advice there. That motivates the experiment, but does not establish the cause of any gain.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="collection.svg" class="img-fluid figure-img"></p>
-<figcaption>A3 executes teacher chunks. A4 executes student chunks and saves the teacher’s recommendation at the same state.</figcaption>
+<figcaption>Offline collection executes teacher chunks. DAgger collection executes student chunks and saves the teacher’s recommendation at the same state.</figcaption>
 </figure>
 </div>
 <table class="caption-top table">
@@ -485,8 +516,8 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <thead>
 <tr class="header">
 <th>Collection/training choice</th>
-<th>A3: offline distillation</th>
-<th>A4: routed DAgger</th>
+<th>Offline distillation</th>
+<th>On-policy distillation with DAgger aggregation</th>
 </tr>
 </thead>
 <tbody>
@@ -522,7 +553,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tr>
 </tbody>
 </table>
-<p>“Routed” is a task-ID lookup. A4 <strong>never executes the teacher’s chunk</strong>. Each round collects pairs, then trains on the accumulated pool; it is not one episode. Both students use supervised flow matching, not RL reward updates. Labels do not guarantee success.</p>
+<p>The code calls the student-driven method “routed DAgger”: routing is just a task-ID lookup. The DAgger student <strong>never executes the teacher’s chunk</strong>. Each round collects pairs, then trains on the accumulated pool; it is not one episode. Both students use supervised flow matching, not RL reward updates. Labels do not guarantee success.</p>
 <p>To compare these choices, we counted teacher queries. <strong>One query returns one labelled chunk at one state</strong>, not one scalar action or one episode:</p>
 <table class="caption-top table">
 <colgroup>
@@ -561,21 +592,21 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tbody>
 </table>
 <p>Q1 therefore means roughly 2k pairs <strong>for each task</strong>, or 4k combined, not 2k split between them.</p>
-<p>A3 uses nested whole-episode prefixes; A4 matches their counts, cutting the last episode if needed. <strong>Each budget restarts from A1.</strong> Both use 256 pairs per task per update and Adam at learning rate 0.0003, with fresh moments.</p>
-<p>For LLM readers, A3 resembles teacher-response SFT; A4 resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, but losses differ. <a href="https://arxiv.org/abs/2306.13649">GKD</a> explicitly connects this idea to <a href="https://arxiv.org/abs/1011.0686">DAgger</a>.</p>
+<p>Offline collection uses nested whole-episode prefixes; DAgger collection matches their counts, cutting the last episode if needed. <strong>Each budget restarts from the same BC generalist checkpoint.</strong> Both use 256 pairs per task per update and Adam at learning rate 0.0003, with fresh moments.</p>
+<p>For LLM readers, offline distillation resembles teacher-response SFT; DAgger resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, but losses differ. <a href="https://arxiv.org/abs/2306.13649">GKD</a> explicitly connects this idea to <a href="https://arxiv.org/abs/1011.0686">DAgger</a>.</p>
 </section>
 <section id="what-happened-when-the-student-drove" class="level2">
 <h2 class="anchored" data-anchor-id="what-happened-when-the-student-drove">What happened when the student drove?</h2>
-<p>The smallest-budget Square result was not a DAgger success story: A3 finished at <strong>43/64</strong>, while A4 fell to <strong>15/64</strong>, below the shared start. Expert advice on student-visited states was not enough for this recipe.</p>
+<p>The smallest-budget Square result was not a DAgger success story: the offline student finished at <strong>43/64</strong>, while the DAgger student fell to <strong>15/64</strong>, below the BC generalist. Expert advice on student-visited states was not enough for this recipe.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="budget-results.svg" class="img-fluid figure-img"></p>
-<figcaption>Saved SDE success counts and Wilson intervals for A3 and A4 across three separate query-budget runs per method.</figcaption>
+<figcaption>Saved SDE success counts and Wilson intervals for the offline and DAgger students across three separate query-budget runs per method.</figcaption>
 </figure>
 </div>
 <p><em>RTX 5090 results after 20,000 updates. Labels show successes on 64 reset seeds, 10000-10063, per task; bars show individual Wilson 95% intervals. Lines connect independent budget runs, not continued training.</em></p>
-<p>With more labels, the Square ranking changed. At Q3, DAgger reached <strong>56/64</strong>, versus offline’s <strong>51/64</strong>.</p>
-<p>Tool Hang resisted a simple “offline first, DAgger later” rule: A4 was ahead at Q1, behind at Q2, and ahead at Q3. At the largest budget, the student-driven recipe had higher point estimates on both tasks:</p>
+<p>With more labels, the Square ranking changed. At Q3, the DAgger student reached <strong>56/64</strong>, versus the offline student’s <strong>51/64</strong>.</p>
+<p>Tool Hang resisted a simple “offline first, DAgger later” rule: the DAgger student was ahead at Q1, behind at Q2, and ahead at Q3. At the largest budget, the student-driven recipe had higher point estimates on both tasks:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 20%">
@@ -586,9 +617,9 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <thead>
 <tr class="header">
 <th>Task, Q3 single-sample SDE</th>
-<th style="text-align: right;">A3: offline</th>
-<th style="text-align: right;">A4: DAgger</th>
-<th style="text-align: right;">Observed A4 minus A3</th>
+<th style="text-align: right;">Offline student</th>
+<th style="text-align: right;">DAgger student</th>
+<th style="text-align: right;">Observed DAgger minus offline</th>
 </tr>
 </thead>
 <tbody>
@@ -606,7 +637,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tr>
 </tbody>
 </table>
-<p>Did that complete the round trip? Square A4 was one episode below critic-free A2’s 57/64, but below the critic-guided teacher’s <strong>62/64</strong>. Tool Hang A4 remained below both the specialist and long BC at 58/64.</p>
+<p>Did that complete the round trip? On Square, the DAgger student was one episode below the critic-free RL specialist’s 57/64, but below the critic-guided teacher’s <strong>62/64</strong>. On Tool Hang, the DAgger student remained below both the RL specialist and long BC at 58/64.</p>
 <p>The shared student makes <strong>zero critic calls at deployment</strong>. That is a structural saving, not a measured latency speedup or evidence of teacher equivalence.</p>
 <p>Both Q3 comparisons have overlapping marginal intervals. Overlap is not a test of the difference; the copied summaries lack per-episode outcomes for a paired test. The 64 evaluation seeds are not independent training runs, so retraining variability remains unknown. Equal queries also do not mean equal wall-clock cost.</p>
 </section>
@@ -616,14 +647,14 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="dagger-rounds.gif" class="img-fluid figure-img"></p>
-<figcaption>Schematic of A4-Q1’s four collect-aggregate-train rounds and cumulative per-task pools, not a robot rollout.</figcaption>
+<figcaption>Schematic of the Q1 DAgger run’s four collect-aggregate-train rounds and cumulative per-task pools, not a robot rollout.</figcaption>
 </figure>
 </div>
-<p><em>Schematic, not a robot rollout. Exact counts come from the saved A4-Q1 run. <a href="dagger-rounds.svg">Static alternative</a>.</em></p>
-<p>A3 has its entire dataset before the first update. A4 receives roughly one quarter before each 5,000-update block. At Q1, that means training first on just 499 Square pairs:</p>
+<p><em>Schematic, not a robot rollout. Exact counts come from the saved Q1 DAgger run. <a href="dagger-rounds.svg">Static alternative</a>.</em></p>
+<p>The offline student has its entire dataset before the first update. The DAgger student receives roughly one quarter before each 5,000-update block. At Q1, that means training first on just 499 Square pairs:</p>
 <pre class="text"><code>5,000 updates * 256 samples / 499 pairs = about 2,565 draws per pair</code></pre>
 <p>Those early pairs remain available in later rounds. A first-round Square pair gets about <strong>5,343 expected draws</strong> over the run; one arriving in the last round gets about <strong>641</strong>. Adam and EMA state also carry forward.</p>
-<p>Overfitting is plausible, not established. A schedule-matched offline control would release A3’s data in four stages too. Without it, “DAgger fixed covariate shift” is too strong: state source and data-arrival schedule changed together.</p>
+<p>Overfitting is plausible, not established. A schedule-matched offline control would release the teacher-collected data in four stages too. Without it, “DAgger fixed covariate shift” is too strong: state source and data-arrival schedule changed together.</p>
 </section>
 <section id="what-did-the-detour-actually-teach-us" class="level2">
 <h2 class="anchored" data-anchor-id="what-did-the-detour-actually-teach-us">What did the detour actually teach us?</h2>
@@ -633,9 +664,9 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <h3 class="anchored" data-anchor-id="evidence-and-protocol">Evidence and protocol</h3>
 <ul>
 <li><a href="p2-protocol.txt">P2 protocol and amendments</a>, especially the long-BC control (plain-text Markdown).</li>
-<li><a href="evaluations.json">Saved evaluations and accounting</a>: A1 at 230k and 500k, both A2 specialists, and A3/A4 at Q1, Q2 and Q3. This bundle preserves the recorded counts, intervals and round statistics; machine-specific paths are omitted.</li>
+<li><a href="evaluations.json">Saved evaluations and accounting</a>: the BC generalist (A1) at 230k and 500k, both RL specialists (A2), and the offline and DAgger students (A3/A4) at Q1, Q2 and Q3. This bundle preserves the recorded counts, intervals and round statistics; machine-specific paths are omitted.</li>
 <li>In a separate CPU execution, device and teacher-restore path changed together. Label mismatch was observed, but its causal role was not isolated.</li>
-<li>An extra-BC CPU control resumed A1@230k for 20k demo-only updates: 34/64 Square and 35/64 Tool Hang SDE. This is separate from long BC; device differs and raw evaluation is not copied.</li>
+<li>An extra-BC CPU control resumed the BC generalist’s 230k checkpoint (A1@230k) for 20k demo-only updates: 34/64 Square and 35/64 Tool Hang SDE. This is separate from long BC; device differs and raw evaluation is not copied.</li>
 </ul>
 <p>The SVG plot and animation were generated directly from the source project’s saved JSON, not digitised from reports. No robot training was rerun to produce these figures.</p>
 
