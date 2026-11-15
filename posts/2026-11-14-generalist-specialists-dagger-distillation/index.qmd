@@ -1,9 +1,9 @@
 ---
-title: "From Generalist to RL Specialists To More Capable Specialist: Offline Distillation vs DAgger"
+title: "From Generalist to RL Specialists To More Capable Generalist: Offline Distillation vs DAgger"
 description: "Creating RL specialists from an average BC generalist policy and using those specialist to improve the BC generalist policy and comparing offline distillation and DAgger for doing that. "
 author: "Akash Prakash"
 date: "2026-11-14"
-categories: [RL, flow matching, distillation, DAgger]
+categories: [RL, flow matching, offline distillation,On Policy distillation , DAgger]
 image: pipeline.svg
 toc: true
 resources:
@@ -18,7 +18,7 @@ The goal was one robot policy that could perform two manipulation tasks. So why 
 
 There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?
 
-The second question has two plausible answers: watch the teachers perform, or let the student act and ask the teachers what they recommend along the way. We tested both.
+The second question has two plausible answers: watch the teachers perform which is similar to the SFT in llms , or let the student act and ask the teachers what they recommend along the way , which is similar to the On policy distillation . In this we tested both and compared the compute and data requirements.
 
 **This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.** I was a bit compute and time constrained.
 
@@ -26,7 +26,7 @@ The second question has two plausible answers: watch the teachers perform, or le
 
 ## Could one policy get both tasks off the ground?
 
-First, a common starting policy had to work on both Robomimic tasks. Single-task sanity runs (A0) checked the setup, but the specialist pipeline would start from shared BC, A1.
+First, a common starting policy had to work on both Robomimic tasks.Here we selected square and tool-hang.
 
 | Task | Goal | State dimensions | Action chunk | Episode limit |
 |---|---|---:|---|---:|
@@ -35,15 +35,17 @@ First, a common starting policy had to work on both Robomimic tasks. Single-task
 
 MH uses multi-human demonstrations of mixed proficiency; PH uses proficient-human demonstrations. Cross-task scores are not a controlled comparison of difficulty.
 
-For A1, we used behaviour cloning (BC): imitate the human demonstrations. Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.
+As the first step of generalist we used behaviour cloning (BC). Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.
 
 Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its **143 inputs** are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.
 
+![One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head. Static architecture diagram exported from the explainer; layer sizes come from the code.](shared-architecture.svg){#fig-shared-architecture fig-alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs."}
+
 Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.
 
-The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation; the mechanism remains open.
+The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation, the mechanism remains open.
 
-A1 reached **65.6% Square and 53.1% Tool Hang SDE success** at 230k updates, clearing the threshold of 45% on both in one evaluation. We had a starting point, not a finished generalist. Could RL improve it?
+After shared BC training we  reached **65.6% Square and 53.1% Tool Hang SDE success** at 230k updates. We had a starting point, not a finished generalist. Could RL improve it?
 
 ## Would specialisation improve that shared start?
 
