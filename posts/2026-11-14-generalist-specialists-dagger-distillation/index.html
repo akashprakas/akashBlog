@@ -8,9 +8,9 @@
 
 <meta name="author" content="Akash Prakash">
 <meta name="dcterms.date" content="2026-11-14">
-<meta name="description" content="A two-task robot pilot: specialise a shared flow-matching policy with RL, then compare offline imitation and student-driven DAgger to consolidate the improvements.">
+<meta name="description" content="Creating RL specialists from an average BC generalist policy and using those specialist to improve the BC generalist policy and comparing offline distillation and DAgger for doing that.">
 
-<title>From Generalist to Specialists and Back: Offline Distillation vs DAgger – Akash’s Blog</title>
+<title>From Generalist to RL Specialists To More Capable Generalist: Offline Distillation vs DAgger – Akash’s Blog</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -294,17 +294,18 @@ ul.task-list li input[type="checkbox"] {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">From Generalist to Specialists and Back: Offline Distillation vs DAgger</h1>
+      <h1 class="title">From Generalist to RL Specialists To More Capable Generalist: Offline Distillation vs DAgger</h1>
                   <div>
         <div class="description">
-          A two-task robot pilot: specialise a shared flow-matching policy with RL, then compare offline imitation and student-driven DAgger to consolidate the improvements.
+          Creating RL specialists from an average BC generalist policy and using those specialist to improve the BC generalist policy and comparing offline distillation and DAgger for doing that.
         </div>
       </div>
                           <div class="quarto-categories">
-                <div class="quarto-category">robotics</div>
-                <div class="quarto-category">reinforcement-learning</div>
-                <div class="quarto-category">flow-matching</div>
-                <div class="quarto-category">distillation</div>
+                <div class="quarto-category">RL</div>
+                <div class="quarto-category">flow matching</div>
+                <div class="quarto-category">offline distillation</div>
+                <div class="quarto-category">On Policy distillation</div>
+                <div class="quarto-category">DAgger</div>
               </div>
                   </div>
   </div>
@@ -359,12 +360,12 @@ ul.task-list li input[type="checkbox"] {
 
 
 <blockquote class="blockquote">
-<p>Experiment evidence: <a href="evaluations.json">saved evaluations</a> and <a href="p2-protocol.txt">P2 protocol</a>.</p>
+<p>Experiment evidence: <a href="evaluations.json">saved evaluations</a> and <a href="p2-protocol.txt">P2 protocol</a>. Repo : https://github.com/akashprakas/flow_policy_distillation</p>
 </blockquote>
 <p>The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?</p>
 <p>There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?</p>
-<p>The second question has two plausible answers: watch the teachers perform, or let the student act and ask the teachers what they recommend along the way. We tested both.</p>
-<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> That comparison was planned but not run.</p>
+<p>The second question has two plausible answers: watch the teachers perform which is similar to the SFT in llms , or let the student act and ask the teachers what they recommend along the way , which is similar to the On policy distillation . In this we tested both and compared the compute and data requirements.</p>
+<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> I was a bit compute and time constrained.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="pipeline.svg" class="img-fluid figure-img"></p>
@@ -373,7 +374,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <section id="could-one-policy-get-both-tasks-off-the-ground" class="level2">
 <h2 class="anchored" data-anchor-id="could-one-policy-get-both-tasks-off-the-ground">Could one policy get both tasks off the ground?</h2>
-<p>First, a common starting policy had to work on both Robomimic tasks. Single-task sanity runs (A0) checked the setup, but the specialist pipeline would start from shared BC, A1.</p>
+<p>First, a common starting policy had to work on both Robomimic tasks.Here we selected square and tool-hang.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 17%">
@@ -409,11 +410,21 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 <p>MH uses multi-human demonstrations of mixed proficiency; PH uses proficient-human demonstrations. Cross-task scores are not a controlled comparison of difficulty.</p>
-<p>For A1, we used behaviour cloning (BC): imitate the human demonstrations. Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.</p>
+<p>As the first step of generalist we used behaviour cloning (BC). Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.</p>
 <p>Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its <strong>143 inputs</strong> are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.</p>
+<div id="fig-shared-architecture" class="quarto-float quarto-figure quarto-figure-center anchored" alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs.">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shared-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="shared-architecture.svg" class="img-fluid figure-img" alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shared-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head. Static architecture diagram exported from the explainer; layer sizes come from the code.
+</figcaption>
+</figure>
+</div>
 <p>Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.</p>
-<p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation; the mechanism remains open.</p>
-<p>A1 reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates, clearing the threshold of 45% on both in one evaluation. We had a starting point, not a finished generalist. Could RL improve it?</p>
+<p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation, the mechanism remains open.</p>
+<p>After shared BC training we reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates. We had a starting point, not a finished generalist. Could RL improve it?</p>
 </section>
 <section id="would-specialisation-improve-that-shared-start" class="level2">
 <h2 class="anchored" data-anchor-id="would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</h2>
