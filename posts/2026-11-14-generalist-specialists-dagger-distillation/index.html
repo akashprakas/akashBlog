@@ -344,10 +344,8 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" id="toc-should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" class="nav-link" data-scroll-target="#should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts">Should the generalist watch the teachers, or learn on its own attempts?</a></li>
   <li><a href="#what-happened-when-the-student-drove" id="toc-what-happened-when-the-student-drove" class="nav-link" data-scroll-target="#what-happened-when-the-student-drove">What happened when the student drove?</a></li>
   <li><a href="#was-this-a-benefit-of-student-state-coverage-or-something-else" id="toc-was-this-a-benefit-of-student-state-coverage-or-something-else" class="nav-link" data-scroll-target="#was-this-a-benefit-of-student-state-coverage-or-something-else">Was this a benefit of student-state coverage, or something else?</a></li>
-  <li><a href="#what-did-the-detour-actually-teach-us" id="toc-what-did-the-detour-actually-teach-us" class="nav-link" data-scroll-target="#what-did-the-detour-actually-teach-us">What did the detour actually teach us?</a>
-  <ul class="collapse">
-  <li><a href="#evidence-and-protocol" id="toc-evidence-and-protocol" class="nav-link" data-scroll-target="#evidence-and-protocol">Evidence and protocol</a></li>
-  </ul></li>
+  <li><a href="#what-did-the-detour-actually-teach-us" id="toc-what-did-the-detour-actually-teach-us" class="nav-link" data-scroll-target="#what-did-the-detour-actually-teach-us">What did the detour actually teach us?</a></li>
+  <li><a href="#credits-and-related-work" id="toc-credits-and-related-work" class="nav-link" data-scroll-target="#credits-and-related-work">Credits and related work</a></li>
   </ul>
 </nav>
     </div>
@@ -359,13 +357,27 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<blockquote class="blockquote">
-<p>Experiment evidence: <a href="evaluations.json">saved evaluations</a> and <a href="p2-protocol.txt">P2 protocol</a>. Repo : https://github.com/akashprakas/flow_policy_distillation</p>
-</blockquote>
+<div class="callout callout-style-default callout-note callout-titled" title="Code and experiment evidence">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Code and experiment evidence
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><strong>Code:</strong> <a href="https://github.com/akashprakas/flow_policy_distillation">flow_policy_distillation on GitHub</a>.</li>
+<li><strong>Results:</strong> <a href="evaluations.json">Saved evaluation summaries and query accounting</a>.</li>
+<li><strong>Protocol:</strong> <a href="p2-protocol.txt">P2 study protocol and amendments</a>.</li>
+</ul>
+</div>
+</div>
 <p>The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?</p>
 <p>There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?</p>
 <p>The second question has two plausible answers: watch the teachers perform which is similar to the SFT in llms , or let the student act and ask the teachers what they recommend along the way , which is similar to the On policy distillation . In this we tested both and compared the compute and data requirements.</p>
-<p>I use descriptive names for the models and methods below. The experiment IDs remain in the diagrams and evidence files so readers can connect the story to the recorded runs.</p>
+<p>I use descriptive names for the models and methods below. The experiment IDs remain in the diagrams and evidence files so it can connect the story to the recorded runs.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -459,7 +471,7 @@ Figure&nbsp;1: One shared trunk, two task-specific velocity heads. This Square s
 </section>
 <section id="would-specialisation-improve-that-shared-start" class="level2">
 <h2 class="anchored" data-anchor-id="would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</h2>
-<p>Rather than discard the BC generalist’s learned representation, we exported task-specific copies and fine-tuned each independently with OGPO reinforcement learning for <strong>one million environment steps</strong>, producing two RL specialists.</p>
+<p>Rather than discard the BC generalist’s learned representation, we exported task-specific copies and fine-tuned each independently with OGPO RL for <strong>one million environment steps</strong>, producing two RL specialists.</p>
 <p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias.(You need to fold the tag to the bias,can be seen in the code)</p>
 <pre class="text"><code>Before: other weighted inputs + task_weight * 1 + old_bias
 After:  other weighted inputs + (old_bias + task_weight)</code></pre>
@@ -604,7 +616,6 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <figcaption>Saved SDE success counts and Wilson intervals for the offline and DAgger students across three separate query-budget runs per method.</figcaption>
 </figure>
 </div>
-<p><em>RTX 5090 results after 20,000 updates. Labels show successes on 64 reset seeds, 10000-10063, per task; bars show individual Wilson 95% intervals. Lines connect independent budget runs, not continued training.</em></p>
 <p>With more labels, the Square ranking changed. At Q3, the DAgger student reached <strong>56/64</strong>, versus the offline student’s <strong>51/64</strong>.</p>
 <p>Tool Hang resisted a simple “offline first, DAgger later” rule: the DAgger student was ahead at Q1, behind at Q2, and ahead at Q3. At the largest budget, the student-driven recipe had higher point estimates on both tasks:</p>
 <table class="caption-top table">
@@ -659,19 +670,21 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <section id="what-did-the-detour-actually-teach-us" class="level2">
 <h2 class="anchored" data-anchor-id="what-did-the-detour-actually-teach-us">What did the detour actually teach us?</h2>
 <p>On Square, the shared start produced RL specialists whose actor-level performance was largely recovered by the larger-budget DAgger student. Tool Hang told a more cautious story: strong BC alone and incomplete consolidation.</p>
-<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds and schedule-matched controls are the next questions, not stronger claims from these curves.</p>
-<section id="evidence-and-protocol" class="level3">
-<h3 class="anchored" data-anchor-id="evidence-and-protocol">Evidence and protocol</h3>
-<ul>
-<li><a href="p2-protocol.txt">P2 protocol and amendments</a>, especially the long-BC control (plain-text Markdown).</li>
-<li><a href="evaluations.json">Saved evaluations and accounting</a>: the BC generalist (A1) at 230k and 500k, both RL specialists (A2), and the offline and DAgger students (A3/A4) at Q1, Q2 and Q3. This bundle preserves the recorded counts, intervals and round statistics; machine-specific paths are omitted.</li>
-<li>In a separate CPU execution, device and teacher-restore path changed together. Label mismatch was observed, but its causal role was not isolated.</li>
-<li>An extra-BC CPU control resumed the BC generalist’s 230k checkpoint (A1@230k) for 20k demo-only updates: 34/64 Square and 35/64 Tool Hang SDE. This is separate from long BC; device differs and raw evaluation is not copied.</li>
-</ul>
-<p>The SVG plot and animation were generated directly from the source project’s saved JSON, not digitised from reports. No robot training was rerun to produce these figures.</p>
-
-
+<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds and schedule-matched controls are the next questions, not stronger claims from these curves. Which I might do in the future if i have compute and time.</p>
 </section>
+<section id="credits-and-related-work" class="level2">
+<h2 class="anchored" data-anchor-id="credits-and-related-work">Credits and related work</h2>
+<p>This study builds on existing methods and open-source tools:</p>
+<ul>
+<li><strong>RLDG — Charles Xu, Qiyang Li, Jianlan Luo and Sergey Levine (2024).</strong> <a href="https://arxiv.org/abs/2412.09858"><em>RLDG: Robotic Generalist Policy Distillation via Reinforcement Learning</em></a> studies using task-specific RL to generate training data for generalist policies, providing closely related work for the specialist-to-generalist pipeline.</li>
+<li><strong>OGPO — Sarvesh Patil et al.&nbsp;(2026).</strong> <a href="https://arxiv.org/abs/2605.03065"><em>OGPO: Sample Efficient Full-Finetuning of Generative Control Policies</em></a> provides the RL fine-tuning method and base implementation used for the specialists. See the <a href="https://github.com/simchowitzlabpublic/OGPO_public">original implementation</a> and the <a href="https://github.com/akashprakas/OGPO_public">fork used in this study</a>.</li>
+<li><strong>DAgger — Stephane Ross, Geoffrey J. Gordon and J. Andrew Bagnell (2011).</strong> <a href="https://arxiv.org/abs/1011.0686"><em>A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning</em></a> introduces the learner-driven expert-labelling and dataset-aggregation approach used in the student-driven distillation recipe.</li>
+<li><strong>GKD — Rishabh Agarwal et al.&nbsp;(ICLR 2024).</strong> <a href="https://arxiv.org/abs/2306.13649"><em>On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes</em></a> provides the language-model connection discussed above. This study uses supervised flow-matching targets, not GKD’s language-model loss.</li>
+<li><strong>Robomimic and Robosuite — the ARISE Initiative teams.</strong> <a href="https://robomimic.github.io/">Robomimic</a> provides the human-demonstration datasets and learning framework; <a href="https://robosuite.ai/">Robosuite</a> provides the simulated manipulation environments used for Square and Tool Hang.</li>
+</ul>
+<p>The experiments reported here are my own low-dimensional, single-training-seed pilot built on these methods and tools, not a new RL or distillation algorithm.</p>
+
+
 </section>
 
 </main> <!-- /main -->
