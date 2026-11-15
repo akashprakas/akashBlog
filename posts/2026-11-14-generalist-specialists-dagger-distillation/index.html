@@ -8,9 +8,9 @@
 
 <meta name="author" content="Akash Prakash">
 <meta name="dcterms.date" content="2026-11-14">
-<meta name="description" content="Creating RL specialists from an average BC generalist policy and using those specialist to improve the BC generalist policy and comparing offline distillation and DAgger for doing that.">
+<meta name="description" content="A single training- seed study of RL specialists and their consolidation into a shared robot policy, comparing offline distillation with on-policy distillation using DAgger-style aggregation.">
 
-<title>From Generalist to RL Specialists To More Capable Generalist: Offline Distillation vs DAgger – Akash’s Blog</title>
+<title>From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation – Akash’s Blog</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -294,10 +294,10 @@ ul.task-list li input[type="checkbox"] {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">From Generalist to RL Specialists To More Capable Generalist: Offline Distillation vs DAgger</h1>
+      <h1 class="title">From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation</h1>
                   <div>
         <div class="description">
-          Creating RL specialists from an average BC generalist policy and using those specialist to improve the BC generalist policy and comparing offline distillation and DAgger for doing that.
+          A single training- seed study of RL specialists and their consolidation into a shared robot policy, comparing offline distillation with on-policy distillation using DAgger-style aggregation.
         </div>
       </div>
                           <div class="quarto-categories">
@@ -376,8 +376,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <p>The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?</p>
 <p>There were two questions: could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?</p>
-<p>The second question has two plausible answers: watch the teachers perform which is similar to the SFT in llms , or let the student act and ask the teachers what they recommend along the way , which is similar to the On policy distillation . In this we tested both and compared the compute and data requirements.</p>
-<p>I use descriptive names for the models and methods below. The experiment IDs remain in the diagrams and evidence files so it can connect the story to the recorded runs.</p>
+<p>The second question has two plausible answers: collect demonstrations while the teachers act, or let the student act and ask the teachers what they would do at the states it visits. We tested both, comparing task success at matched teacher-query budgets and student-training updates.</p>
+<p>I use descriptive names for the models and methods below. The experiment IDs remain in the diagrams and evidence files so readers can connect the story to the recorded runs.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -408,7 +408,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> I was a bit compute and time constrained.</p>
+<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> Time and compute constraints limited its scope.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="pipeline.svg" class="img-fluid figure-img"></p>
@@ -417,7 +417,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <section id="could-one-policy-get-both-tasks-off-the-ground" class="level2">
 <h2 class="anchored" data-anchor-id="could-one-policy-get-both-tasks-off-the-ground">Could one policy get both tasks off the ground?</h2>
-<p>First, a common starting policy had to work on both Robomimic tasks.Here we selected square and tool-hang.</p>
+<p>First, a common starting policy had to work on both selected Robomimic tasks: Square and Tool Hang.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 17%">
@@ -453,7 +453,7 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 <p>MH uses multi-human demonstrations of mixed proficiency; PH uses proficient-human demonstrations. Cross-task scores are not a controlled comparison of difficulty.</p>
-<p>As the first step of generalist we used behaviour cloning (BC). Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.</p>
+<p>We first trained the generalist with behaviour cloning (BC) on human demonstrations. Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.</p>
 <p>Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its <strong>143 inputs</strong> are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.</p>
 <div id="fig-shared-architecture" class="quarto-float quarto-figure quarto-figure-center anchored" alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs.">
 <figure class="quarto-float quarto-float-fig figure">
@@ -466,18 +466,20 @@ Figure&nbsp;1: One shared trunk, two task-specific velocity heads. This Square s
 </figure>
 </div>
 <p>Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.</p>
-<p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation, the mechanism remains open.</p>
-<p>After shared BC training we reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates. We had a starting point, not a finished generalist. So the next step was to use RL to improve the current score.</p>
+<p>The shared start did not work immediately. Under standardisation, Tool Hang failed despite falling imitation loss. Raw observations restored learning, but later measurements did not support the original numerical explanation; the mechanism remains open.</p>
+<p><strong>How actions are sampled.</strong> Both sampling modes start from Gaussian noise and take ten integration steps. <strong>SDE</strong> (stochastic differential equation) sampling adds noise during integration and uses <strong>EMA</strong> (exponential moving average) actor weights. <strong>ODE</strong> (ordinary differential equation) sampling adds no integration noise and uses the current, non-averaged weights. Because both the integration noise and the weights differ, an SDE-versus-ODE success gap does not isolate the effect of noise.</p>
+<p>After shared BC training, the generalist reached <strong>65.6% Square and 53.1% Tool Hang SDE success</strong> at 230k updates. We had a starting point, not a finished generalist. The next step was to try RL specialisation.</p>
 </section>
 <section id="would-specialisation-improve-that-shared-start" class="level2">
 <h2 class="anchored" data-anchor-id="would-specialisation-improve-that-shared-start">Would specialisation improve that shared start?</h2>
 <p>Rather than discard the BC generalist’s learned representation, we exported task-specific copies and fine-tuned each independently with OGPO RL for <strong>one million environment steps</strong>, producing two RL specialists.</p>
-<p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias.(You need to fold the tag to the bias,can be seen in the code)</p>
+<p>Export keeps the selected output head and removes inputs that are always zero. The fixed task tag can also be removed, provided its contribution is added to the first-layer bias:</p>
 <pre class="text"><code>Before: other weighted inputs + task_weight * 1 + old_bias
 After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <p>Export preserves the initial function apart from roundoff, producing 83-input Square and 141-input Tool Hang actors. Both retain the BC generalist’s trunk, but <strong>stop sharing weights during RL</strong>.</p>
-<p>Each specialist gets ten new critics. For labels, its EMA actor proposes eight SDE chunks. All ten target critics evaluate each; the <strong>minimum of two randomly sampled heads, with replacement</strong>, determines its score. The best candidate wins, 80 head-values per query, often batched.</p>
-<p>The actor-only evaluations suggested that the RL speciliazation had helped:</p>
+<p><strong>Export provenance.</strong> The 83- and 141-input actors came from the original study’s specialist exporter. The linked repository’s <a href="https://github.com/akashprakas/flow_policy_distillation/blob/main/core/models.py">shared-evaluation helper</a> retains the padded observation and task tag. It is a separate interface, not the full specialist export described above.</p>
+<p>Each specialist gets a newly initialised ten-head critic ensemble. For labels, its EMA actor proposes eight SDE chunks. All ten target critic heads evaluate each candidate; the <strong>minimum of two randomly sampled heads, with replacement</strong>, determines that candidate’s score. The highest-scoring candidate becomes the teacher label: 80 head-values per query, often batched.</p>
+<p>The actor-only evaluations suggested that RL specialisation had helped:</p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -506,7 +508,6 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </table>
 <p>Then a control complicated the story. Fresh shared BC trained to 500k also reached <strong>90.6% on Tool Hang</strong>, but only 29.7% on Square. The RL specialist’s Tool Hang gain over the BC generalist at 230k did not establish that RL was necessary; that starting checkpoint was under-trained.</p>
 <p>To test whether the RL specialists could help the BC generalist, we evaluated recovery from earlier snapshots of episodes the generalist later failed. Recovery at early snapshots gave provisional encouragement, not a guarantee that distillation would improve the student.</p>
-<p>SDE uses EMA weights and stochastic integration; ODE uses online weights without additional integration noise. Both start from Gaussian noise and take ten integration steps, so their difference does not isolate noise.</p>
 </section>
 <section id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts" class="level2">
 <h2 class="anchored" data-anchor-id="should-the-generalist-watch-the-teachers-or-learn-on-its-own-attempts">Should the generalist watch the teachers, or learn on its own attempts?</h2>
@@ -605,7 +606,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </table>
 <p>Q1 therefore means roughly 2k pairs <strong>for each task</strong>, or 4k combined, not 2k split between them.</p>
 <p>Offline collection uses nested whole-episode prefixes; DAgger collection matches their counts, cutting the last episode if needed. <strong>Each budget restarts from the same BC generalist checkpoint.</strong> Both use 256 pairs per task per update and Adam at learning rate 0.0003, with fresh moments.</p>
-<p>For LLM readers, offline distillation resembles teacher-response SFT; DAgger resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, but losses differ. <a href="https://arxiv.org/abs/2306.13649">GKD</a> explicitly connects this idea to <a href="https://arxiv.org/abs/1011.0686">DAgger</a>.</p>
+<p>For readers familiar with large language models (LLMs), offline distillation resembles supervised fine-tuning (SFT) on teacher responses; DAgger resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, but losses differ. <a href="https://arxiv.org/abs/2306.13649">GKD</a> explicitly connects this idea to <a href="https://arxiv.org/abs/1011.0686">DAgger</a>.</p>
 </section>
 <section id="what-happened-when-the-student-drove" class="level2">
 <h2 class="anchored" data-anchor-id="what-happened-when-the-student-drove">What happened when the student drove?</h2>
@@ -669,14 +670,16 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </section>
 <section id="what-did-the-detour-actually-teach-us" class="level2">
 <h2 class="anchored" data-anchor-id="what-did-the-detour-actually-teach-us">What did the detour actually teach us?</h2>
-<p>On Square, the shared start produced RL specialists whose actor-level performance was largely recovered by the larger-budget DAgger student. Tool Hang told a more cautious story: strong BC alone and incomplete consolidation.</p>
-<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds and schedule-matched controls are the next questions, not stronger claims from these curves. Which I might do in the future if i have compute and time.</p>
+<p>On Square, the largest-budget DAgger student’s SDE success count was close to the critic-free RL specialist’s count in this run. Tool Hang told a more cautious story: strong BC alone and incomplete consolidation.</p>
+<p>There is also an extra-training question. The fresh 500k BC run is not a matched continuation control for the distillation students. Continuing the same 230k checkpoint for another 20k updates on human demonstrations, using the same device and optimiser recipe, would help isolate the benefit of teacher supervision. No such same-device control is included in the supplied GPU evaluation bundle.</p>
+<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds, schedule-matched offline controls and a same-device continuation-BC control are needed before making stronger claims. I may pursue these when time and compute allow.</p>
 </section>
 <section id="credits-and-related-work" class="level2">
 <h2 class="anchored" data-anchor-id="credits-and-related-work">Credits and related work</h2>
 <p>This study builds on existing methods and open-source tools:</p>
 <ul>
 <li><strong>RLDG — Charles Xu, Qiyang Li, Jianlan Luo and Sergey Levine (2024).</strong> <a href="https://arxiv.org/abs/2412.09858"><em>RLDG: Robotic Generalist Policy Distillation via Reinforcement Learning</em></a> studies using task-specific RL to generate training data for generalist policies, providing closely related work for the specialist-to-generalist pipeline.</li>
+<li><strong>Multi-teacher flow-policy OPD — Lichao Ni, Yuhan Liu, Pengfei Li and Guanghuan Fang (2026).</strong> <a href="https://arxiv.org/abs/2610.21522"><em>Multi-Teacher On-Policy Distillation for Flow-Based Vision-Language-Action Models</em></a> is the closest related comparison identified in the <a href="p2-protocol.txt">P2 protocol</a>. Its proposed method also supervises teacher velocities along student-generated action flows. This pilot instead uses low-dimensional observations and critic-selected action-chunk labels, followed by supervised flow matching.</li>
 <li><strong>OGPO — Sarvesh Patil et al.&nbsp;(2026).</strong> <a href="https://arxiv.org/abs/2605.03065"><em>OGPO: Sample Efficient Full-Finetuning of Generative Control Policies</em></a> provides the RL fine-tuning method and base implementation used for the specialists. See the <a href="https://github.com/simchowitzlabpublic/OGPO_public">original implementation</a> and the <a href="https://github.com/akashprakas/OGPO_public">fork used in this study</a>.</li>
 <li><strong>DAgger — Stephane Ross, Geoffrey J. Gordon and J. Andrew Bagnell (2011).</strong> <a href="https://arxiv.org/abs/1011.0686"><em>A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning</em></a> introduces the learner-driven expert-labelling and dataset-aggregation approach used in the student-driven distillation recipe.</li>
 <li><strong>GKD — Rishabh Agarwal et al.&nbsp;(ICLR 2024).</strong> <a href="https://arxiv.org/abs/2306.13649"><em>On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes</em></a> provides the language-model connection discussed above. This study uses supervised flow-matching targets, not GKD’s language-model loss.</li>
