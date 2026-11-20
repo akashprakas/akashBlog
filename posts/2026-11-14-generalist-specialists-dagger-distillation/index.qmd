@@ -1,19 +1,21 @@
 ---
 title: "From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation"
-description: "A single training seed study of RL specialists and their consolidation into a shared robot policy, comparing offline distillation with on policy distillation using DAgger style aggregation."
+description: "A single-seed pilot and a ten-seed controlled follow-up comparing offline and DAgger-style consolidation of RL specialists into a shared flow policy."
 author: "Akash Prakash"
 date: "2026-11-14"
-categories: [RL, flow matching, offline distillation,On Policy distillation , DAgger]
+categories: [RL, Flow matching, Offline distillation,On Policy distillation , DAgger]
 image: pipeline.svg
 toc: true
 resources:
   - p2-protocol.txt
   - evaluations.json
+  - v4-analysis.json
 ---
 
 ::: {.callout-note title="Code and experiment evidence"}
 - **Code:** [flow_policy_distillation on GitHub](https://github.com/akashprakas/flow_policy_distillation).
 - **Results:** [Saved evaluation summaries and query accounting](evaluations.json).
+- **Controlled follow-up:** [Complete ten-seed analysis and provenance](v4-analysis.json).
 :::
 
 The goal was one robot policy that could perform two manipulation tasks. So why take a detour through two separate specialists?
@@ -31,7 +33,7 @@ I use descriptive names for the models and methods below. The experiment IDs rem
 | Offline distillation, producing the **offline student** | A3 |
 | On-policy distillation (OPD) with DAgger-style dataset aggregation, producing the **DAgger student** | A4 |
 
-**This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.** Time and compute constraints limited its scope.
+**The original study below is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.** The [ten-seed controlled follow-up](#controlled-q3-follow-up) later in this post adds the schedule and BC controls; the historical pilot is kept separate.
 
 ![The shared BC generalist becomes two RL specialists. Their labels train either an offline student or a DAgger student, both initialised from the same BC generalist.](pipeline.svg)
 
@@ -169,7 +171,71 @@ On Square, the largest-budget DAgger student's SDE success count was close to th
 
 There is also an extra-training question. The fresh 500k BC run is not a matched continuation control for the distillation students. Continuing the same 230k checkpoint for another 20k updates on human demonstrations, using the same device and optimiser recipe, would help isolate the benefit of teacher supervision. No such same-device control is included in the supplied GPU evaluation bundle.
 
-The result is not "always let the student drive." It is a reason to test state source and data exposure together. Multiple training seeds, schedule-matched offline controls and a same-device continuation-BC control are needed before making stronger claims. I may pursue these when time and compute allow.
+The pilot's result is not "always let the student drive." It motivated testing state source and data exposure together. The controlled follow-up below now adds multiple student/collection seeds, schedule-matched offline controls and same-device continuation-BC controls.
+
+## Controlled Q3 follow-up: ten seeds and a matched schedule {#controlled-q3-follow-up}
+
+**Update, 20 November 2026.** We completed ten replications, seeds 101–110, using the same fixed BC start and specialist bank. This is replication of student training and collection, **not ten independently trained RL teacher banks**.
+
+Each replication trained four shared students for 20k updates: short continuation BC on the original human demonstrations, upfront offline, staged offline and DAgger. Both offline methods used the same last-whole-episode teacher prefix at or below 32k labels per task; DAgger matched its exact count. Staged offline revealed labels in four pools to match DAgger's training schedule. All arms restored the same current/EMA BC weights and started fresh Adam once.
+
+A fifth arm continued BC for 270k additional updates. Before held-out evaluation, it selected one joint policy from +20k/+70k/+170k/+270k using the equal-weight two-task SDE average on monitor seeds 10000–10063; the earliest candidate won ties. The fixed +270k endpoint was also retained. This is not a task-wise oracle or a search over arbitrary endpoints.
+
+All fifty training runs and their audits finished before held-out evaluation on reset seeds 200000–200127: 128 episodes per task and sampling mode. [The full analysis](v4-analysis.json) records the frozen protocol, execution provenance, individual cells and all ten paired differences.
+
+### What changed with the controls?
+
+Mean held-out **SDE success across ten trained shared policies**:
+
+| Method | Square | Tool Hang | Equal-weight two-task average |
+|---|---:|---:|---:|
+| Short continuation BC (+20k) | 57.42% | 45.94% | 51.68% |
+| Upfront offline (+20k) | 78.44% | 65.39% | 71.91% |
+| Staged offline (+20k) | 75.78% | 61.72% | 68.75% |
+| DAgger (+20k) | 76.48% | 69.06% | 72.77% |
+| Monitor-selected long BC | 40.86% | 82.11% | 61.48% |
+| Fixed long BC (+270k) | 40.55% | 86.09% | 63.32% |
+
+The prespecified primary contrast was **DAgger minus staged offline**, averaging the two tasks within each replication first. Its mean was **+4.02 percentage points**, paired Student-t 95% interval **[+1.71, +6.34]**, sample SD **3.24 points**, with **n=10 and df=9**.
+
+For seeds 101–110 respectively, all ten paired differences were **+8.98, −1.17, +3.52, +7.42, +5.86, +7.03, +2.34, +3.13, +2.73 and +0.39 points**. The interval is over these replication differences, not pooled episode counts.
+
+This supports a positive average adaptive-recipe effect over schedule-matched offline, **conditional on this BC start, fixed specialists, two tasks and evaluation bank**. The task breakdown matters:
+
+- **Square:** +0.70 points, interval [−1.75, +3.15]—inconclusive, not equivalence.
+- **Tool Hang:** +7.34 points, interval [+3.89, +10.80].
+
+It does **not** reproduce the pilot's +8.6-point gap against *upfront* offline. The follow-up's exploratory DAgger-minus-upfront average was only **+0.86 points [−1.65, +3.36]**. Staged offline was **3.16 points below upfront offline** on average, also exploratory. Thus matching the schedule changes the comparator; these results do not establish universal superiority of student-driven acquisition or isolate recovery-state coverage as the mechanism.
+
+The key secondary contrast, DAgger minus monitor-selected long BC, was **+11.29 points [+8.73, +13.85]** on the two-task average. That interval is **exploratory and unadjusted for multiple comparisons**. It masks a large trade-off: Square favoured DAgger by **35.63 points**, but Tool Hang favoured long BC by **13.05 points** (DAgger-minus-BC interval [−20.62, −5.47]).
+
+So sufficiently trained BC remains a strong Tool Hang alternative. The secondary result is improvement beyond these jointly selected BC candidates on average, **not proof that RL is necessary**. Square's long-BC deterioration is consistent with overfitting or task interference, but this study did not separate those mechanisms.
+
+### The simulator boundary is part of the protocol
+
+An earlier v3 run exposed a hidden MuJoCo numerical reset followed by observations retaining the old episode identity. We preserved that evidence and restarted the **entire** cohort as v4 before viewing held-out results; no v3 models or data enter these estimates.
+
+V4 explicitly ends a numerical-fault episode as unsuccessful and truncated. It applies the same boundary to teachers, students, BC controls, monitoring and final evaluation, without changing physics or the optimisation recipe. Valid labels computed before the fault remain; post-reset observations cannot continue under the old identity.
+
+Recorded faults were uncommon in this study: **teacher collection 1/14,395 episodes; DAgger student collection 0/8,780; monitoring 3/44,800**—one each in DAgger, short BC and long BC, with none in either offline arm. The two BC events replayed the same +20k policy/seed failure, not two independent discoveries. Held-out evaluation recorded **0/30,976 actually executed episodes**. These counts are conditional observations, not a general simulator reliability guarantee.
+
+### Why a critic-selected label can jump
+
+Best-of-8 selects a chunk; it does not average the eight chunks. Even with smooth candidate generators and critics at fixed sampling noise, **argmax selection can be discontinuous when candidate scores cross**. A small scoring change can therefore produce a large action-target change.
+
+The audit caught this at seed 109's Tool Hang row 32002. The saved and differing replay chunks were exact candidates 1 and 0, about **0.172** apart in maximum coordinate difference. One diagnostic gave their scores as −52.8520 and −52.8499: a gap of **0.0022**. The first two probes varied by about **0.0052** in another candidate's score; a further diagnostic exposed variation up to **0.0169** and reversed the leading pair's ranking. This is consistent with a precision-sensitive Best-of-8 winner flip. The diagnostics return extra intermediates and change the compiled graph, so they do not recover the exact original sampler's hidden arithmetic.
+
+The row was outside the actual **31,968-pair training prefix**. We preserved the failed audit and matching probes rather than retrying until green. Before seed 110 and all held-out results, we disclosed a fixed audit rule: both differing chunks must exactly match generated candidates and each must be within **0.020 Q units** of the diagnostic winner; otherwise the audit fails. That screen is not a universal floating-point error bound. No seed, dataset, checkpoint, numerical setting or analysis rule changed. Seed 110 needed no near-tie exception.
+
+This discontinuity is relevant to learning chunk targets, but we did not measure how much it contributes to distillation difficulty. It is a mechanism to keep in mind, not an explanation retrofitted to the success gap.
+
+### Cost and limits
+
+The final matrix contains **32,000 logical episode records**. Selected and fixed long BC were byte-identical for seeds 108 and 110, so their matching evaluations reused results: **30,976 episodes were actually executed**. Those duplicated cells are not extra independent evidence.
+
+V4 jobs took **34.68 hours**; cumulative job-wall cost was **40.21 hours**, including **5.53 hours** of preserved v3 work. The six-hour reserve was an allowance, not measured work. Calibration and post-job audits are separate.
+
+The follow-up makes the comparison stronger, not universal: one fixed BC start, one fixed teacher bank, two low-dimensional tasks and ten paired student/collection replications. The t interval assumes approximately normal independent replication differences; secondary contrasts remain exploratory. The student still removes critic calls at deployment, but neither teacher equivalence nor a measured latency speedup follows.
 
 ## Credits and related work
 
@@ -182,4 +248,4 @@ This study builds on existing methods and open-source tools:
 - **GKD — Rishabh Agarwal et al. (ICLR 2024).** [*On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes*](https://arxiv.org/abs/2306.13649) provides the language-model connection discussed above. This study uses supervised flow-matching targets, not GKD's language-model loss.
 - **Robomimic and Robosuite — the ARISE Initiative teams.** [Robomimic](https://robomimic.github.io/) provides the human-demonstration datasets and learning framework; [Robosuite](https://robosuite.ai/) provides the simulated manipulation environments used for Square and Tool Hang.
 
-The experiments reported here are my own low-dimensional, single-training-seed pilot built on these methods and tools, not a new RL or distillation algorithm.
+The pilot and conditional ten-seed follow-up reported here are my own low-dimensional experiments built on these methods and tools, not a new RL or distillation algorithm.
