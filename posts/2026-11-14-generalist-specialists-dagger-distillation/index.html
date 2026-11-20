@@ -348,6 +348,9 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#controlled-q3-follow-up" id="toc-controlled-q3-follow-up" class="nav-link" data-scroll-target="#controlled-q3-follow-up">Controlled Q3 follow-up: ten seeds and a matched schedule</a>
   <ul class="collapse">
   <li><a href="#what-changed-with-the-controls" id="toc-what-changed-with-the-controls" class="nav-link" data-scroll-target="#what-changed-with-the-controls">What changed with the controls?</a></li>
+  <li><a href="#how-much-of-the-round-trip-was-completed" id="toc-how-much-of-the-round-trip-was-completed" class="nav-link" data-scroll-target="#how-much-of-the-round-trip-was-completed">How much of the round trip was completed?</a></li>
+  <li><a href="#the-primary-sde-comparison" id="toc-the-primary-sde-comparison" class="nav-link" data-scroll-target="#the-primary-sde-comparison">The primary SDE comparison</a></li>
+  <li><a href="#the-ode-secondary-outcome-tells-a-different-story" id="toc-the-ode-secondary-outcome-tells-a-different-story" class="nav-link" data-scroll-target="#the-ode-secondary-outcome-tells-a-different-story">The ODE secondary outcome tells a different story</a></li>
   <li><a href="#the-simulator-boundary-is-part-of-the-protocol" id="toc-the-simulator-boundary-is-part-of-the-protocol" class="nav-link" data-scroll-target="#the-simulator-boundary-is-part-of-the-protocol">The simulator boundary is part of the protocol</a></li>
   <li><a href="#why-a-critic-selected-label-can-jump" id="toc-why-a-critic-selected-label-can-jump" class="nav-link" data-scroll-target="#why-a-critic-selected-label-can-jump">Why a critic-selected label can jump</a></li>
   <li><a href="#cost-and-limits" id="toc-cost-and-limits" class="nav-link" data-scroll-target="#cost-and-limits">Cost and limits</a></li>
@@ -656,7 +659,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tr>
 </tbody>
 </table>
-<p>Did that complete the round trip? On Square, the DAgger student was one episode below the critic-free RL specialist’s 57/64, but below the critic-guided teacher’s <strong>62/64</strong>. On Tool Hang, the DAgger student remained below both the RL specialist and long BC at 58/64.</p>
+<p>Did that complete the round trip? On Square, the DAgger student was one episode below the critic-free specialist (<strong>57/64</strong>) and six below the critic-guided teacher (<strong>62/64</strong>). On Tool Hang, the DAgger student remained below both the RL specialist and long BC at 58/64.</p>
 <p>The shared student makes <strong>zero critic calls at deployment</strong>. That is a structural saving, not a measured latency speedup or evidence of teacher equivalence.</p>
 <p>Both Q3 comparisons have overlapping marginal intervals. Overlap is not a test of the difference; the copied summaries lack per-episode outcomes for a paired test. The 64 evaluation seeds are not independent training runs, so retraining variability remains unknown. Equal queries also do not mean equal wall-clock cost.</p>
 </section>
@@ -684,6 +687,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <section id="controlled-q3-follow-up" class="level2">
 <h2 class="anchored" data-anchor-id="controlled-q3-follow-up">Controlled Q3 follow-up: ten seeds and a matched schedule</h2>
 <p><strong>Update, 20 November 2026.</strong> We completed ten replications, seeds 101–110, using the same fixed BC start and specialist bank. This is replication of student training and collection, <strong>not ten independently trained RL teacher banks</strong>.</p>
+<p><strong>Plain takeaway:</strong> in the prespecified SDE mode, letting the student drive beat teacher-driven data under the same four-stage schedule by <strong>4.0 points</strong>, mostly from Tool Hang. But staging itself hurt offline distillation (<strong>−3.2 points</strong>), and DAgger was not clearly better than upfront offline (<strong>+0.9, inconclusive</strong>). The distilled students beat equal-update BC by about <strong>17–21 points</strong> on the two-task average. Longer BC remained stronger on Tool Hang but deteriorated on Square. The ODE secondary results below do not show the same DAgger advantage.</p>
 <p>Each replication trained four shared students for 20k updates: short continuation BC on the original human demonstrations, upfront offline, staged offline and DAgger. Both offline methods used the same last-whole-episode teacher prefix at or below 32k labels per task; DAgger matched its exact count. Staged offline revealed labels in four pools to match DAgger’s training schedule. All arms restored the same current/EMA BC weights and started fresh Adam once.</p>
 <p>A fifth arm continued BC for 270k additional updates. Before held-out evaluation, it selected one joint policy from +20k/+70k/+170k/+270k using the equal-weight two-task SDE average on monitor seeds 10000–10063; the earliest candidate won ties. The fixed +270k endpoint was also retained. This is not a task-wise oracle or a search over arbitrary endpoints.</p>
 <p>All fifty training runs and their audits finished before held-out evaluation on reset seeds 200000–200127: 128 episodes per task and sampling mode. <a href="v4-analysis.json">The full analysis</a> records the frozen protocol, execution provenance, individual cells and all ten paired differences.</p>
@@ -738,6 +742,46 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 </tr>
 </tbody>
 </table>
+<p>Short BC’s Square mean, <strong>57.4%</strong>, is below A1’s <strong>65.6%</strong> on these held-out seeds. That continuation combines extra human-demo updates with a fresh Adam restart; this is not an experiment isolating the cost of restarting the optimiser. Every +20k arm used the same restart, so the optimiser treatment does not differ across those method comparisons.</p>
+</section>
+<section id="how-much-of-the-round-trip-was-completed" class="level3">
+<h3 class="anchored" data-anchor-id="how-much-of-the-round-trip-was-completed">How much of the round trip was completed?</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Held-out SDE reference</th>
+<th style="text-align: right;">Square</th>
+<th style="text-align: right;">Tool Hang</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Fixed A1 start (230k)</td>
+<td style="text-align: right;">84/128 = 65.6%</td>
+<td style="text-align: right;">51/128 = 39.8%</td>
+</tr>
+<tr class="even">
+<td>Fixed specialists, no critic</td>
+<td style="text-align: right;">109/128 = 85.2%</td>
+<td style="text-align: right;">119/128 = 93.0%</td>
+</tr>
+<tr class="odd">
+<td>Fixed specialists, Best-of-8</td>
+<td style="text-align: right;">116/128 = 90.6%</td>
+<td style="text-align: right;">114/128 = 89.1%</td>
+</tr>
+<tr class="even">
+<td>DAgger, mean over ten student/collection seeds</td>
+<td style="text-align: right;">76.5%</td>
+<td style="text-align: right;">69.1%</td>
+</tr>
+</tbody>
+</table>
+<p>DAgger still trails the critic-free specialists by <strong>8.7 points on Square and 23.9 on Tool Hang</strong>; consolidation is incomplete. On Tool Hang, Best-of-8 scored below plain SDE (<strong>89.1% versus 93.0%</strong>) in this one fixed-teacher evaluation. The labels come from Best-of-8, but critic-guided selection is not guaranteed to improve success; this is not a general ranking of the two teacher modes.</p>
+<p>These references use held-out seeds <strong>200000–200127</strong>, a different seed set and the common v4 failure boundary, rather than the pilot’s earlier 64-episode evaluations. Differences from the pilot percentages do not represent additional teacher training.</p>
+</section>
+<section id="the-primary-sde-comparison" class="level3">
+<h3 class="anchored" data-anchor-id="the-primary-sde-comparison">The primary SDE comparison</h3>
 <p>The prespecified primary contrast was <strong>DAgger minus staged offline</strong>, averaging the two tasks within each replication first. Its mean was <strong>+4.02 percentage points</strong>, paired Student-t 95% interval <strong>[+1.71, +6.34]</strong>, sample SD <strong>3.24 points</strong>, with <strong>n=10 and df=9</strong>.</p>
 <p>For seeds 101–110 respectively, all ten paired differences were <strong>+8.98, −1.17, +3.52, +7.42, +5.86, +7.03, +2.34, +3.13, +2.73 and +0.39 points</strong>. The interval is over these replication differences, not pooled episode counts.</p>
 <p>This supports a positive average adaptive-recipe effect over schedule-matched offline, <strong>conditional on this BC start, fixed specialists, two tasks and evaluation bank</strong>. The task breakdown matters:</p>
@@ -748,6 +792,42 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <p>It does <strong>not</strong> reproduce the pilot’s +8.6-point gap against <em>upfront</em> offline. The follow-up’s exploratory DAgger-minus-upfront average was only <strong>+0.86 points [−1.65, +3.36]</strong>. Staged offline was <strong>3.16 points below upfront offline</strong> on average, also exploratory. Thus matching the schedule changes the comparator; these results do not establish universal superiority of student-driven acquisition or isolate recovery-state coverage as the mechanism.</p>
 <p>The key secondary contrast, DAgger minus monitor-selected long BC, was <strong>+11.29 points [+8.73, +13.85]</strong> on the two-task average. That interval is <strong>exploratory and unadjusted for multiple comparisons</strong>. It masks a large trade-off: Square favoured DAgger by <strong>35.63 points</strong>, but Tool Hang favoured long BC by <strong>13.05 points</strong> (DAgger-minus-BC interval [−20.62, −5.47]).</p>
 <p>So sufficiently trained BC remains a strong Tool Hang alternative. The secondary result is improvement beyond these jointly selected BC candidates on average, <strong>not proof that RL is necessary</strong>. Square’s long-BC deterioration is consistent with overfitting or task interference, but this study did not separate those mechanisms.</p>
+</section>
+<section id="the-ode-secondary-outcome-tells-a-different-story" class="level3">
+<h3 class="anchored" data-anchor-id="the-ode-secondary-outcome-tells-a-different-story">The ODE secondary outcome tells a different story</h3>
+<p>Mean held-out <strong>ODE success across ten student/collection seeds</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th style="text-align: right;">Square</th>
+<th style="text-align: right;">Tool Hang</th>
+<th style="text-align: right;">Equal-weight two-task average</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Upfront offline</td>
+<td style="text-align: right;">71.56%</td>
+<td style="text-align: right;">55.55%</td>
+<td style="text-align: right;">63.55%</td>
+</tr>
+<tr class="even">
+<td>Staged offline</td>
+<td style="text-align: right;">70.47%</td>
+<td style="text-align: right;">44.22%</td>
+<td style="text-align: right;">57.34%</td>
+</tr>
+<tr class="odd">
+<td>DAgger</td>
+<td style="text-align: right;">67.34%</td>
+<td style="text-align: right;">41.80%</td>
+<td style="text-align: right;">54.57%</td>
+</tr>
+</tbody>
+</table>
+<p>The exploratory ODE DAgger-minus-staged-offline contrast is <strong>−2.77 points [−12.12, +6.57]</strong>, an inconclusive paired interval, not evidence of equivalence. DAgger’s Tool Hang ODE mean is <strong>41.8%</strong>, versus <strong>69.1%</strong> in SDE; ODE counts range from <strong>16/128 to 84/128</strong> across seeds. The positive Tool Hang contrast against staged offline therefore appears in the prespecified SDE mode, not ODE.</p>
+<p>SDE uses EMA weights and adds integration noise; ODE uses current weights without that added integration noise. Both still start from Gaussian noise, and their intermediate-action clipping conventions also differ. DAgger collected states using its EMA-SDE driving policy, which could help explain mode sensitivity, but that is an untested hypothesis. This study cannot isolate whether EMA, integration noise, clipping or another difference explains the gap. SDE was fixed as the primary mode before results; ODE remains a reported secondary outcome.</p>
 </section>
 <section id="the-simulator-boundary-is-part-of-the-protocol" class="level3">
 <h3 class="anchored" data-anchor-id="the-simulator-boundary-is-part-of-the-protocol">The simulator boundary is part of the protocol</h3>
@@ -767,6 +847,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <p>The final matrix contains <strong>32,000 logical episode records</strong>. Selected and fixed long BC were byte-identical for seeds 108 and 110, so their matching evaluations reused results: <strong>30,976 episodes were actually executed</strong>. Those duplicated cells are not extra independent evidence.</p>
 <p>V4 jobs took <strong>34.68 hours</strong>; cumulative job-wall cost was <strong>40.21 hours</strong>, including <strong>5.53 hours</strong> of preserved v3 work. The six-hour reserve was an allowance, not measured work. Calibration and post-job audits are separate.</p>
 <p>The follow-up makes the comparison stronger, not universal: one fixed BC start, one fixed teacher bank, two low-dimensional tasks and ten paired student/collection replications. The t interval assumes approximately normal independent replication differences; secondary contrasts remain exploratory. The student still removes critic calls at deployment, but neither teacher equivalence nor a measured latency speedup follows.</p>
+<p><strong>Study closed:</strong> these are the final prespecified outcomes. No additional seeds or recipe changes are being added to this cohort.</p>
 </section>
 </section>
 <section id="credits-and-related-work" class="level2">
