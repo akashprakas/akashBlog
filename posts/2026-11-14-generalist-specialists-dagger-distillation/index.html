@@ -8,7 +8,7 @@
 
 <meta name="author" content="Akash Prakash">
 <meta name="dcterms.date" content="2026-11-14">
-<meta name="description" content="A single training seed study of RL specialists and their consolidation into a shared robot policy, comparing offline distillation with on policy distillation using DAgger style aggregation.">
+<meta name="description" content="A single-seed pilot and a ten-seed controlled follow-up comparing offline and DAgger-style consolidation of RL specialists into a shared flow policy.">
 
 <title>From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation – Akash’s Blog</title>
 <style>
@@ -297,13 +297,13 @@ ul.task-list li input[type="checkbox"] {
       <h1 class="title">From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation</h1>
                   <div>
         <div class="description">
-          A single training seed study of RL specialists and their consolidation into a shared robot policy, comparing offline distillation with on policy distillation using DAgger style aggregation.
+          A single-seed pilot and a ten-seed controlled follow-up comparing offline and DAgger-style consolidation of RL specialists into a shared flow policy.
         </div>
       </div>
                           <div class="quarto-categories">
                 <div class="quarto-category">RL</div>
-                <div class="quarto-category">flow matching</div>
-                <div class="quarto-category">offline distillation</div>
+                <div class="quarto-category">Flow matching</div>
+                <div class="quarto-category">Offline distillation</div>
                 <div class="quarto-category">On Policy distillation</div>
                 <div class="quarto-category">DAgger</div>
               </div>
@@ -345,6 +345,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#what-happened-when-the-student-drove" id="toc-what-happened-when-the-student-drove" class="nav-link" data-scroll-target="#what-happened-when-the-student-drove">What happened when the student drove?</a></li>
   <li><a href="#was-this-a-benefit-of-student-state-coverage-or-something-else" id="toc-was-this-a-benefit-of-student-state-coverage-or-something-else" class="nav-link" data-scroll-target="#was-this-a-benefit-of-student-state-coverage-or-something-else">Was this a benefit of student-state coverage, or something else?</a></li>
   <li><a href="#what-did-the-detour-actually-teach-us" id="toc-what-did-the-detour-actually-teach-us" class="nav-link" data-scroll-target="#what-did-the-detour-actually-teach-us">What did the detour actually teach us?</a></li>
+  <li><a href="#controlled-q3-follow-up" id="toc-controlled-q3-follow-up" class="nav-link" data-scroll-target="#controlled-q3-follow-up">Controlled Q3 follow-up: ten seeds and a matched schedule</a>
+  <ul class="collapse">
+  <li><a href="#what-changed-with-the-controls" id="toc-what-changed-with-the-controls" class="nav-link" data-scroll-target="#what-changed-with-the-controls">What changed with the controls?</a></li>
+  <li><a href="#the-simulator-boundary-is-part-of-the-protocol" id="toc-the-simulator-boundary-is-part-of-the-protocol" class="nav-link" data-scroll-target="#the-simulator-boundary-is-part-of-the-protocol">The simulator boundary is part of the protocol</a></li>
+  <li><a href="#why-a-critic-selected-label-can-jump" id="toc-why-a-critic-selected-label-can-jump" class="nav-link" data-scroll-target="#why-a-critic-selected-label-can-jump">Why a critic-selected label can jump</a></li>
+  <li><a href="#cost-and-limits" id="toc-cost-and-limits" class="nav-link" data-scroll-target="#cost-and-limits">Cost and limits</a></li>
+  </ul></li>
   <li><a href="#credits-and-related-work" id="toc-credits-and-related-work" class="nav-link" data-scroll-target="#credits-and-related-work">Credits and related work</a></li>
   </ul>
 </nav>
@@ -370,6 +377,7 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li><strong>Code:</strong> <a href="https://github.com/akashprakas/flow_policy_distillation">flow_policy_distillation on GitHub</a>.</li>
 <li><strong>Results:</strong> <a href="evaluations.json">Saved evaluation summaries and query accounting</a>.</li>
+<li><strong>Controlled follow-up:</strong> <a href="v4-analysis.json">Complete ten-seed analysis and provenance</a>.</li>
 </ul>
 </div>
 </div>
@@ -407,7 +415,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p><strong>This is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> Time and compute constraints limited its scope.</p>
+<p><strong>The original study below is a single-training-seed pilot with state observations, not a demonstration that the detour beats joint multi-task RL.</strong> The <a href="#controlled-q3-follow-up">ten-seed controlled follow-up</a> later in this post adds the schedule and BC controls; the historical pilot is kept separate.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="pipeline.svg" class="img-fluid figure-img"></p>
@@ -671,7 +679,95 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <h2 class="anchored" data-anchor-id="what-did-the-detour-actually-teach-us">What did the detour actually teach us?</h2>
 <p>On Square, the largest-budget DAgger student’s SDE success count was close to the critic-free RL specialist’s count in this run. Tool Hang told a more cautious story: strong BC alone and incomplete consolidation.</p>
 <p>There is also an extra-training question. The fresh 500k BC run is not a matched continuation control for the distillation students. Continuing the same 230k checkpoint for another 20k updates on human demonstrations, using the same device and optimiser recipe, would help isolate the benefit of teacher supervision. No such same-device control is included in the supplied GPU evaluation bundle.</p>
-<p>The result is not “always let the student drive.” It is a reason to test state source and data exposure together. Multiple training seeds, schedule-matched offline controls and a same-device continuation-BC control are needed before making stronger claims. I may pursue these when time and compute allow.</p>
+<p>The pilot’s result is not “always let the student drive.” It motivated testing state source and data exposure together. The controlled follow-up below now adds multiple student/collection seeds, schedule-matched offline controls and same-device continuation-BC controls.</p>
+</section>
+<section id="controlled-q3-follow-up" class="level2">
+<h2 class="anchored" data-anchor-id="controlled-q3-follow-up">Controlled Q3 follow-up: ten seeds and a matched schedule</h2>
+<p><strong>Update, 20 November 2026.</strong> We completed ten replications, seeds 101–110, using the same fixed BC start and specialist bank. This is replication of student training and collection, <strong>not ten independently trained RL teacher banks</strong>.</p>
+<p>Each replication trained four shared students for 20k updates: short continuation BC on the original human demonstrations, upfront offline, staged offline and DAgger. Both offline methods used the same last-whole-episode teacher prefix at or below 32k labels per task; DAgger matched its exact count. Staged offline revealed labels in four pools to match DAgger’s training schedule. All arms restored the same current/EMA BC weights and started fresh Adam once.</p>
+<p>A fifth arm continued BC for 270k additional updates. Before held-out evaluation, it selected one joint policy from +20k/+70k/+170k/+270k using the equal-weight two-task SDE average on monitor seeds 10000–10063; the earliest candidate won ties. The fixed +270k endpoint was also retained. This is not a task-wise oracle or a search over arbitrary endpoints.</p>
+<p>All fifty training runs and their audits finished before held-out evaluation on reset seeds 200000–200127: 128 episodes per task and sampling mode. <a href="v4-analysis.json">The full analysis</a> records the frozen protocol, execution provenance, individual cells and all ten paired differences.</p>
+<section id="what-changed-with-the-controls" class="level3">
+<h3 class="anchored" data-anchor-id="what-changed-with-the-controls">What changed with the controls?</h3>
+<p>Mean held-out <strong>SDE success across ten trained shared policies</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th style="text-align: right;">Square</th>
+<th style="text-align: right;">Tool Hang</th>
+<th style="text-align: right;">Equal-weight two-task average</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Short continuation BC (+20k)</td>
+<td style="text-align: right;">57.42%</td>
+<td style="text-align: right;">45.94%</td>
+<td style="text-align: right;">51.68%</td>
+</tr>
+<tr class="even">
+<td>Upfront offline (+20k)</td>
+<td style="text-align: right;">78.44%</td>
+<td style="text-align: right;">65.39%</td>
+<td style="text-align: right;">71.91%</td>
+</tr>
+<tr class="odd">
+<td>Staged offline (+20k)</td>
+<td style="text-align: right;">75.78%</td>
+<td style="text-align: right;">61.72%</td>
+<td style="text-align: right;">68.75%</td>
+</tr>
+<tr class="even">
+<td>DAgger (+20k)</td>
+<td style="text-align: right;">76.48%</td>
+<td style="text-align: right;">69.06%</td>
+<td style="text-align: right;">72.77%</td>
+</tr>
+<tr class="odd">
+<td>Monitor-selected long BC</td>
+<td style="text-align: right;">40.86%</td>
+<td style="text-align: right;">82.11%</td>
+<td style="text-align: right;">61.48%</td>
+</tr>
+<tr class="even">
+<td>Fixed long BC (+270k)</td>
+<td style="text-align: right;">40.55%</td>
+<td style="text-align: right;">86.09%</td>
+<td style="text-align: right;">63.32%</td>
+</tr>
+</tbody>
+</table>
+<p>The prespecified primary contrast was <strong>DAgger minus staged offline</strong>, averaging the two tasks within each replication first. Its mean was <strong>+4.02 percentage points</strong>, paired Student-t 95% interval <strong>[+1.71, +6.34]</strong>, sample SD <strong>3.24 points</strong>, with <strong>n=10 and df=9</strong>.</p>
+<p>For seeds 101–110 respectively, all ten paired differences were <strong>+8.98, −1.17, +3.52, +7.42, +5.86, +7.03, +2.34, +3.13, +2.73 and +0.39 points</strong>. The interval is over these replication differences, not pooled episode counts.</p>
+<p>This supports a positive average adaptive-recipe effect over schedule-matched offline, <strong>conditional on this BC start, fixed specialists, two tasks and evaluation bank</strong>. The task breakdown matters:</p>
+<ul>
+<li><strong>Square:</strong> +0.70 points, interval [−1.75, +3.15]—inconclusive, not equivalence.</li>
+<li><strong>Tool Hang:</strong> +7.34 points, interval [+3.89, +10.80].</li>
+</ul>
+<p>It does <strong>not</strong> reproduce the pilot’s +8.6-point gap against <em>upfront</em> offline. The follow-up’s exploratory DAgger-minus-upfront average was only <strong>+0.86 points [−1.65, +3.36]</strong>. Staged offline was <strong>3.16 points below upfront offline</strong> on average, also exploratory. Thus matching the schedule changes the comparator; these results do not establish universal superiority of student-driven acquisition or isolate recovery-state coverage as the mechanism.</p>
+<p>The key secondary contrast, DAgger minus monitor-selected long BC, was <strong>+11.29 points [+8.73, +13.85]</strong> on the two-task average. That interval is <strong>exploratory and unadjusted for multiple comparisons</strong>. It masks a large trade-off: Square favoured DAgger by <strong>35.63 points</strong>, but Tool Hang favoured long BC by <strong>13.05 points</strong> (DAgger-minus-BC interval [−20.62, −5.47]).</p>
+<p>So sufficiently trained BC remains a strong Tool Hang alternative. The secondary result is improvement beyond these jointly selected BC candidates on average, <strong>not proof that RL is necessary</strong>. Square’s long-BC deterioration is consistent with overfitting or task interference, but this study did not separate those mechanisms.</p>
+</section>
+<section id="the-simulator-boundary-is-part-of-the-protocol" class="level3">
+<h3 class="anchored" data-anchor-id="the-simulator-boundary-is-part-of-the-protocol">The simulator boundary is part of the protocol</h3>
+<p>An earlier v3 run exposed a hidden MuJoCo numerical reset followed by observations retaining the old episode identity. We preserved that evidence and restarted the <strong>entire</strong> cohort as v4 before viewing held-out results; no v3 models or data enter these estimates.</p>
+<p>V4 explicitly ends a numerical-fault episode as unsuccessful and truncated. It applies the same boundary to teachers, students, BC controls, monitoring and final evaluation, without changing physics or the optimisation recipe. Valid labels computed before the fault remain; post-reset observations cannot continue under the old identity.</p>
+<p>Recorded faults were uncommon in this study: <strong>teacher collection 1/14,395 episodes; DAgger student collection 0/8,780; monitoring 3/44,800</strong>—one each in DAgger, short BC and long BC, with none in either offline arm. The two BC events replayed the same +20k policy/seed failure, not two independent discoveries. Held-out evaluation recorded <strong>0/30,976 actually executed episodes</strong>. These counts are conditional observations, not a general simulator reliability guarantee.</p>
+</section>
+<section id="why-a-critic-selected-label-can-jump" class="level3">
+<h3 class="anchored" data-anchor-id="why-a-critic-selected-label-can-jump">Why a critic-selected label can jump</h3>
+<p>Best-of-8 selects a chunk; it does not average the eight chunks. Even with smooth candidate generators and critics at fixed sampling noise, <strong>argmax selection can be discontinuous when candidate scores cross</strong>. A small scoring change can therefore produce a large action-target change.</p>
+<p>The audit caught this at seed 109’s Tool Hang row 32002. The saved and differing replay chunks were exact candidates 1 and 0, about <strong>0.172</strong> apart in maximum coordinate difference. One diagnostic gave their scores as −52.8520 and −52.8499: a gap of <strong>0.0022</strong>. The first two probes varied by about <strong>0.0052</strong> in another candidate’s score; a further diagnostic exposed variation up to <strong>0.0169</strong> and reversed the leading pair’s ranking. This is consistent with a precision-sensitive Best-of-8 winner flip. The diagnostics return extra intermediates and change the compiled graph, so they do not recover the exact original sampler’s hidden arithmetic.</p>
+<p>The row was outside the actual <strong>31,968-pair training prefix</strong>. We preserved the failed audit and matching probes rather than retrying until green. Before seed 110 and all held-out results, we disclosed a fixed audit rule: both differing chunks must exactly match generated candidates and each must be within <strong>0.020 Q units</strong> of the diagnostic winner; otherwise the audit fails. That screen is not a universal floating-point error bound. No seed, dataset, checkpoint, numerical setting or analysis rule changed. Seed 110 needed no near-tie exception.</p>
+<p>This discontinuity is relevant to learning chunk targets, but we did not measure how much it contributes to distillation difficulty. It is a mechanism to keep in mind, not an explanation retrofitted to the success gap.</p>
+</section>
+<section id="cost-and-limits" class="level3">
+<h3 class="anchored" data-anchor-id="cost-and-limits">Cost and limits</h3>
+<p>The final matrix contains <strong>32,000 logical episode records</strong>. Selected and fixed long BC were byte-identical for seeds 108 and 110, so their matching evaluations reused results: <strong>30,976 episodes were actually executed</strong>. Those duplicated cells are not extra independent evidence.</p>
+<p>V4 jobs took <strong>34.68 hours</strong>; cumulative job-wall cost was <strong>40.21 hours</strong>, including <strong>5.53 hours</strong> of preserved v3 work. The six-hour reserve was an allowance, not measured work. Calibration and post-job audits are separate.</p>
+<p>The follow-up makes the comparison stronger, not universal: one fixed BC start, one fixed teacher bank, two low-dimensional tasks and ten paired student/collection replications. The t interval assumes approximately normal independent replication differences; secondary contrasts remain exploratory. The student still removes critic calls at deployment, but neither teacher equivalence nor a measured latency speedup follows.</p>
+</section>
 </section>
 <section id="credits-and-related-work" class="level2">
 <h2 class="anchored" data-anchor-id="credits-and-related-work">Credits and related work</h2>
@@ -684,7 +780,7 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <li><strong>GKD — Rishabh Agarwal et al.&nbsp;(ICLR 2024).</strong> <a href="https://arxiv.org/abs/2306.13649"><em>On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes</em></a> provides the language-model connection discussed above. This study uses supervised flow-matching targets, not GKD’s language-model loss.</li>
 <li><strong>Robomimic and Robosuite — the ARISE Initiative teams.</strong> <a href="https://robomimic.github.io/">Robomimic</a> provides the human-demonstration datasets and learning framework; <a href="https://robosuite.ai/">Robosuite</a> provides the simulated manipulation environments used for Square and Tool Hang.</li>
 </ul>
-<p>The experiments reported here are my own low-dimensional, single-training-seed pilot built on these methods and tools, not a new RL or distillation algorithm.</p>
+<p>The pilot and conditional ten-seed follow-up reported here are my own low-dimensional experiments built on these methods and tools, not a new RL or distillation algorithm.</p>
 
 
 </section>
