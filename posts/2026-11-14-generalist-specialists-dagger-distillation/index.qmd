@@ -141,7 +141,7 @@ Tool Hang resisted a simple "offline first, DAgger later" rule: the DAgger stude
 | Square | 51/64 = 79.7% | 56/64 = 87.5% | +7.8 percentage points |
 | Tool Hang | 43/64 = 67.2% | 49/64 = 76.6% | +9.4 percentage points |
 
-Did that complete the round trip? On Square, the DAgger student was one episode below the critic-free RL specialist's 57/64, but below the critic-guided teacher's **62/64**. On Tool Hang, the DAgger student remained below both the RL specialist and long BC at 58/64.
+Did that complete the round trip? On Square, the DAgger student was one episode below the critic-free specialist (**57/64**) and six below the critic-guided teacher (**62/64**). On Tool Hang, the DAgger student remained below both the RL specialist and long BC at 58/64.
 
 The shared student makes **zero critic calls at deployment**. That is a structural saving, not a measured latency speedup or evidence of teacher equivalence.
 
@@ -177,6 +177,8 @@ The pilot's result is not "always let the student drive." It motivated testing s
 
 **Update, 20 November 2026.** We completed ten replications, seeds 101–110, using the same fixed BC start and specialist bank. This is replication of student training and collection, **not ten independently trained RL teacher banks**.
 
+**Plain takeaway:** in the prespecified SDE mode, letting the student drive beat teacher-driven data under the same four-stage schedule by **4.0 points**, mostly from Tool Hang. But staging itself hurt offline distillation (**−3.2 points**), and DAgger was not clearly better than upfront offline (**+0.9, inconclusive**). The distilled students beat equal-update BC by about **17–21 points** on the two-task average. Longer BC remained stronger on Tool Hang but deteriorated on Square. The ODE secondary results below do not show the same DAgger advantage.
+
 Each replication trained four shared students for 20k updates: short continuation BC on the original human demonstrations, upfront offline, staged offline and DAgger. Both offline methods used the same last-whole-episode teacher prefix at or below 32k labels per task; DAgger matched its exact count. Staged offline revealed labels in four pools to match DAgger's training schedule. All arms restored the same current/EMA BC weights and started fresh Adam once.
 
 A fifth arm continued BC for 270k additional updates. Before held-out evaluation, it selected one joint policy from +20k/+70k/+170k/+270k using the equal-weight two-task SDE average on monitor seeds 10000–10063; the earliest candidate won ties. The fixed +270k endpoint was also retained. This is not a task-wise oracle or a search over arbitrary endpoints.
@@ -196,6 +198,23 @@ Mean held-out **SDE success across ten trained shared policies**:
 | Monitor-selected long BC | 40.86% | 82.11% | 61.48% |
 | Fixed long BC (+270k) | 40.55% | 86.09% | 63.32% |
 
+Short BC's Square mean, **57.4%**, is below A1's **65.6%** on these held-out seeds. That continuation combines extra human-demo updates with a fresh Adam restart; this is not an experiment isolating the cost of restarting the optimiser. Every +20k arm used the same restart, so the optimiser treatment does not differ across those method comparisons.
+
+### How much of the round trip was completed?
+
+| Held-out SDE reference | Square | Tool Hang |
+|---|---:|---:|
+| Fixed A1 start (230k) | 84/128 = 65.6% | 51/128 = 39.8% |
+| Fixed specialists, no critic | 109/128 = 85.2% | 119/128 = 93.0% |
+| Fixed specialists, Best-of-8 | 116/128 = 90.6% | 114/128 = 89.1% |
+| DAgger, mean over ten student/collection seeds | 76.5% | 69.1% |
+
+DAgger still trails the critic-free specialists by **8.7 points on Square and 23.9 on Tool Hang**; consolidation is incomplete. On Tool Hang, Best-of-8 scored below plain SDE (**89.1% versus 93.0%**) in this one fixed-teacher evaluation. The labels come from Best-of-8, but critic-guided selection is not guaranteed to improve success; this is not a general ranking of the two teacher modes.
+
+These references use held-out seeds **200000–200127**, a different seed set and the common v4 failure boundary, rather than the pilot's earlier 64-episode evaluations. Differences from the pilot percentages do not represent additional teacher training.
+
+### The primary SDE comparison
+
 The prespecified primary contrast was **DAgger minus staged offline**, averaging the two tasks within each replication first. Its mean was **+4.02 percentage points**, paired Student-t 95% interval **[+1.71, +6.34]**, sample SD **3.24 points**, with **n=10 and df=9**.
 
 For seeds 101–110 respectively, all ten paired differences were **+8.98, −1.17, +3.52, +7.42, +5.86, +7.03, +2.34, +3.13, +2.73 and +0.39 points**. The interval is over these replication differences, not pooled episode counts.
@@ -210,6 +229,20 @@ It does **not** reproduce the pilot's +8.6-point gap against *upfront* offline. 
 The key secondary contrast, DAgger minus monitor-selected long BC, was **+11.29 points [+8.73, +13.85]** on the two-task average. That interval is **exploratory and unadjusted for multiple comparisons**. It masks a large trade-off: Square favoured DAgger by **35.63 points**, but Tool Hang favoured long BC by **13.05 points** (DAgger-minus-BC interval [−20.62, −5.47]).
 
 So sufficiently trained BC remains a strong Tool Hang alternative. The secondary result is improvement beyond these jointly selected BC candidates on average, **not proof that RL is necessary**. Square's long-BC deterioration is consistent with overfitting or task interference, but this study did not separate those mechanisms.
+
+### The ODE secondary outcome tells a different story
+
+Mean held-out **ODE success across ten student/collection seeds**:
+
+| Method | Square | Tool Hang | Equal-weight two-task average |
+|---|---:|---:|---:|
+| Upfront offline | 71.56% | 55.55% | 63.55% |
+| Staged offline | 70.47% | 44.22% | 57.34% |
+| DAgger | 67.34% | 41.80% | 54.57% |
+
+The exploratory ODE DAgger-minus-staged-offline contrast is **−2.77 points [−12.12, +6.57]**, an inconclusive paired interval, not evidence of equivalence. DAgger's Tool Hang ODE mean is **41.8%**, versus **69.1%** in SDE; ODE counts range from **16/128 to 84/128** across seeds. The positive Tool Hang contrast against staged offline therefore appears in the prespecified SDE mode, not ODE.
+
+SDE uses EMA weights and adds integration noise; ODE uses current weights without that added integration noise. Both still start from Gaussian noise, and their intermediate-action clipping conventions also differ. DAgger collected states using its EMA-SDE driving policy, which could help explain mode sensitivity, but that is an untested hypothesis. This study cannot isolate whether EMA, integration noise, clipping or another difference explains the gap. SDE was fixed as the primary mode before results; ODE remains a reported secondary outcome.
 
 ### The simulator boundary is part of the protocol
 
@@ -236,6 +269,8 @@ The final matrix contains **32,000 logical episode records**. Selected and fixed
 V4 jobs took **34.68 hours**; cumulative job-wall cost was **40.21 hours**, including **5.53 hours** of preserved v3 work. The six-hour reserve was an allowance, not measured work. Calibration and post-job audits are separate.
 
 The follow-up makes the comparison stronger, not universal: one fixed BC start, one fixed teacher bank, two low-dimensional tasks and ten paired student/collection replications. The t interval assumes approximately normal independent replication differences; secondary contrasts remain exploratory. The student still removes critic calls at deployment, but neither teacher equivalence nor a measured latency speedup follows.
+
+**Study closed:** these are the final prespecified outcomes. No additional seeds or recipe changes are being added to this cohort.
 
 ## Credits and related work
 
