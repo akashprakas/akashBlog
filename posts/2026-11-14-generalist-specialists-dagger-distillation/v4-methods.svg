@@ -1,0 +1,357 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="1000" height="580" role="img" aria-labelledby="title desc" font-family="DejaVu Sans, sans-serif">
+  <title id="title">Held-out SDE vs ODE success across all six v4 methods</title>
+  <desc id="desc">Ten-seed held-out SDE and ODE success rates (128 episodes per task and mode) for all six training arms in Q3 v4, with fixed A1 start and critic-free A2 specialist reference lines.</desc>
+  <rect width="1000" height="580" fill="#f6f8fc" rx="18" />
+  <text x="35" y="40" fill="#17263c" font-size="23.5" font-weight="700">Distillation beats short BC, trails specialists, and drops sharply in ODE.</text>
+  <text x="35" y="65" fill="#53647a" font-size="13.5">MEASURED | 10 seeds (101–110) | 128 held-out episodes/task | Small marks: individual seeds, large marks: 10-seed mean</text>
+  <circle cx="44" cy="96" r="6" fill="#1e293b" stroke="white" stroke-width="1.5" />
+  <text x="56" y="101" fill="#17263c" font-size="13" font-weight="700">SDE mean (EMA, primary)</text>
+  <rect x="262" y="90" width="12" height="12" fill="white" stroke="#1e293b" stroke-width="2.4" />
+  <text x="282" y="101" fill="#17263c" font-size="13" font-weight="700">ODE mean (current weights)</text>
+  <line x1="506" y1="96" x2="534" y2="96" stroke="#64748b" stroke-width="2" stroke-dasharray="5 4" />
+  <text x="542" y="101" fill="#53647a" font-size="12.5">Fixed A1 start (230k, SDE)</text>
+  <line x1="736" y1="96" x2="764" y2="96" stroke="#059669" stroke-width="2.2" stroke-dasharray="5 4" />
+  <text x="772" y="101" fill="#059669" font-size="12.5" font-weight="700">A2 specialist (no critic, SDE)</text>
+  <rect x="24" y="224" width="952" height="48" rx="8" fill="#eaf0f8" fill-opacity="0.72" />
+  <rect x="24" y="332" width="952" height="48" rx="8" fill="#eaf0f8" fill-opacity="0.72" />
+  <rect x="24" y="440" width="952" height="48" rx="8" fill="#eaf0f8" fill-opacity="0.72" />
+  <text x="400.0" y="138" fill="#17263c" font-size="17" font-weight="700" text-anchor="middle">Square MH</text>
+  <line x1="225.0" y1="152" x2="225.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="225.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">0%</text>
+  <line x1="312.5" y1="152" x2="312.5" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="312.5" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">25%</text>
+  <line x1="400.0" y1="152" x2="400.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="400.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">50%</text>
+  <line x1="487.5" y1="152" x2="487.5" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="487.5" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">75%</text>
+  <line x1="575.0" y1="152" x2="575.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="575.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">100%</text>
+  <line x1="454.7" y1="152" x2="454.7" y2="488" stroke="#64748b" stroke-width="2" stroke-dasharray="5 4" />
+  <line x1="523.0" y1="152" x2="523.0" y2="488" stroke="#059669" stroke-width="2.2" stroke-dasharray="5 4" />
+  <text x="449.7" y="164" fill="#64748b" font-size="11" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3">A1 65.6%</text>
+  <text x="518.0" y="164" fill="#059669" font-size="11" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3">A2 85.2%</text>
+  <text x="790.0" y="138" fill="#17263c" font-size="17" font-weight="700" text-anchor="middle">Tool Hang PH</text>
+  <line x1="615.0" y1="152" x2="615.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="615.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">0%</text>
+  <line x1="702.5" y1="152" x2="702.5" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="702.5" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">25%</text>
+  <line x1="790.0" y1="152" x2="790.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="790.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">50%</text>
+  <line x1="877.5" y1="152" x2="877.5" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="877.5" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">75%</text>
+  <line x1="965.0" y1="152" x2="965.0" y2="488" stroke="#dbe3ee" stroke-width="1.3" />
+  <text x="965.0" y="508" fill="#53647a" font-size="12.5" text-anchor="middle">100%</text>
+  <line x1="754.5" y1="152" x2="754.5" y2="488" stroke="#64748b" stroke-width="2" stroke-dasharray="5 4" />
+  <line x1="940.4" y1="152" x2="940.4" y2="488" stroke="#059669" stroke-width="2.2" stroke-dasharray="5 4" />
+  <text x="749.5" y="164" fill="#64748b" font-size="11" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3">A1 39.8%</text>
+  <text x="935.4" y="164" fill="#059669" font-size="11" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3">A2 93.0%</text>
+  <text x="35" y="199" fill="#17263c" font-size="14" font-weight="700">Short BC (+20k)</text>
+  <line x1="397.8" y1="204" x2="426.0" y2="186" stroke="#64748b" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="441.0" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="424.6" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="430.1" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="435.5" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="441.0" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="410.9" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="413.7" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="419.1" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="427.3" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="416.4" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <rect x="400.4" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="395.0" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="405.9" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="425.0" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="414.1" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="400.4" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="378.6" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="381.3" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="400.4" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="353.9" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="426.0" cy="186" r="5.8" fill="#64748b" stroke="white" stroke-width="1.8" />
+  <rect x="392.8" y="199.0" width="10" height="10" fill="white" stroke="#64748b" stroke-width="2.3" />
+  <text x="436.0" y="190" fill="#64748b" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">57.4%</text>
+  <text x="387.8" y="208" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">49.4%</text>
+  <line x1="721.9" y1="204" x2="775.8" y2="186" stroke="#64748b" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="779.1" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="762.7" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="765.4" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="779.1" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="806.4" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="781.8" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="779.1" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="781.8" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="751.7" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <circle cx="770.9" cy="186" r="2.7" fill="#64748b" fill-opacity="0.32" />
+  <rect x="664.7" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="744.0" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="724.8" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="702.9" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="741.2" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="757.6" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="733.0" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="637.3" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="730.3" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="760.4" y="201.7" width="4.6" height="4.6" fill="none" stroke="#64748b" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="775.8" cy="186" r="5.8" fill="#64748b" stroke="white" stroke-width="1.8" />
+  <rect x="716.9" y="199.0" width="10" height="10" fill="white" stroke="#64748b" stroke-width="2.3" />
+  <text x="785.8" y="190" fill="#64748b" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">45.9%</text>
+  <text x="711.9" y="208" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">30.5%</text>
+  <text x="35" y="253" fill="#17263c" font-size="14" font-weight="700">Upfront offline (+20k)</text>
+  <line x1="475.5" y1="258" x2="499.5" y2="240" stroke="#2563eb" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="509.4" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="503.9" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="493.0" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="506.6" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="493.0" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="498.4" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="498.4" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="509.4" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="493.0" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="490.2" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <rect x="468.8" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="468.8" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="474.3" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="474.3" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="490.7" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="482.5" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="485.2" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="460.6" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="487.9" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="438.7" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="499.5" cy="240" r="5.8" fill="#2563eb" stroke="white" stroke-width="1.8" />
+  <rect x="470.5" y="253.0" width="10" height="10" fill="white" stroke="#2563eb" stroke-width="2.3" />
+  <text x="509.5" y="244" fill="#2563eb" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">78.4%</text>
+  <text x="465.5" y="262" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">71.6%</text>
+  <line x1="809.4" y1="258" x2="843.9" y2="240" stroke="#2563eb" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="855.6" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="839.2" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="833.8" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="839.2" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="833.8" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="839.2" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="842.0" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="842.0" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="866.6" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <circle cx="847.4" cy="240" r="2.7" fill="#2563eb" fill-opacity="0.32" />
+  <rect x="815.0" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="809.6" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="828.7" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="785.0" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="834.2" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="795.9" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="820.5" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="763.1" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="831.5" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="787.7" y="255.7" width="4.6" height="4.6" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="843.9" cy="240" r="5.8" fill="#2563eb" stroke="white" stroke-width="1.8" />
+  <rect x="804.4" y="253.0" width="10" height="10" fill="white" stroke="#2563eb" stroke-width="2.3" />
+  <text x="853.9" y="244" fill="#2563eb" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">65.4%</text>
+  <text x="799.4" y="262" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">55.5%</text>
+  <text x="35" y="307" fill="#17263c" font-size="14" font-weight="700">Staged offline (+20k)</text>
+  <line x1="471.6" y1="312" x2="490.2" y2="294" stroke="#0891b2" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="490.2" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="482.0" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="498.4" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="473.8" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="487.5" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="471.1" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="490.2" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="490.2" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="506.6" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="512.1" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <rect x="479.7" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="493.4" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="455.1" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="449.7" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="507.1" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="485.2" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="425.0" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="485.2" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="463.3" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="449.7" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="490.2" cy="294" r="5.8" fill="#0891b2" stroke="white" stroke-width="1.8" />
+  <rect x="466.6" y="307.0" width="10" height="10" fill="white" stroke="#0891b2" stroke-width="2.3" />
+  <text x="500.2" y="298" fill="#0891b2" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">75.8%</text>
+  <text x="461.6" y="316" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">70.5%</text>
+  <line x1="769.8" y1="312" x2="831.0" y2="294" stroke="#0891b2" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="825.5" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="825.5" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="850.2" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="820.1" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="831.0" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="820.1" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="850.2" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="836.5" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="822.8" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <circle cx="828.3" cy="294" r="2.7" fill="#0891b2" fill-opacity="0.32" />
+  <rect x="834.2" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="793.2" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="820.5" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="763.1" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="733.0" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="787.7" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="727.5" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="752.2" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="735.7" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="727.5" y="309.7" width="4.6" height="4.6" fill="none" stroke="#0891b2" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="831.0" cy="294" r="5.8" fill="#0891b2" stroke="white" stroke-width="1.8" />
+  <rect x="764.8" y="307.0" width="10" height="10" fill="white" stroke="#0891b2" stroke-width="2.3" />
+  <text x="841.0" y="298" fill="#0891b2" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">61.7%</text>
+  <text x="759.8" y="316" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">44.2%</text>
+  <text x="35" y="361" fill="#17263c" font-size="14" font-weight="700">DAgger (+20k)</text>
+  <line x1="460.7" y1="366" x2="492.7" y2="348" stroke="#7c3aed" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="509.4" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="490.2" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="493.0" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="493.0" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="498.4" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="479.3" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="479.3" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="484.8" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="498.4" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="501.2" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <rect x="468.8" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="460.6" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="449.7" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="485.2" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="444.2" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="466.1" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="425.0" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="446.9" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="455.1" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="482.5" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="492.7" cy="348" r="5.8" fill="#7c3aed" stroke="white" stroke-width="1.8" />
+  <rect x="455.7" y="361.0" width="10" height="10" fill="white" stroke="#7c3aed" stroke-width="2.3" />
+  <text x="502.7" y="352" fill="#7c3aed" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">76.5%</text>
+  <text x="450.7" y="370" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">67.3%</text>
+  <line x1="761.3" y1="366" x2="856.7" y2="348" stroke="#7c3aed" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="869.3" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="809.1" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="880.2" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="852.9" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="861.1" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="861.1" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="877.5" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="863.8" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="850.2" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <circle cx="842.0" cy="348" r="2.7" fill="#7c3aed" fill-opacity="0.32" />
+  <rect x="793.2" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="683.8" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="765.8" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="746.7" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="823.2" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="656.5" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="752.2" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="730.3" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="795.9" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="842.4" y="363.7" width="4.6" height="4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="856.7" cy="348" r="5.8" fill="#7c3aed" stroke="white" stroke-width="1.8" />
+  <rect x="756.3" y="361.0" width="10" height="10" fill="white" stroke="#7c3aed" stroke-width="2.3" />
+  <text x="866.7" y="352" fill="#7c3aed" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">69.1%</text>
+  <text x="751.3" y="370" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">41.8%</text>
+  <text x="35" y="415" fill="#17263c" font-size="14" font-weight="700">Selected long BC</text>
+  <line x1="350.2" y1="420" x2="368.0" y2="402" stroke="#d97706" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="402.7" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="353.5" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="359.0" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="378.1" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="369.9" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="348.0" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="391.8" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="345.3" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="386.3" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="345.3" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <rect x="395.0" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="356.7" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="337.5" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="348.5" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="332.1" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="334.8" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="373.1" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="343.0" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="356.7" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="302.0" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="368.0" cy="402" r="5.8" fill="#d97706" stroke="white" stroke-width="1.8" />
+  <rect x="345.2" y="415.0" width="10" height="10" fill="white" stroke="#d97706" stroke-width="2.3" />
+  <text x="378.0" y="406" fill="#d97706" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">40.9%</text>
+  <text x="340.2" y="424" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">35.8%</text>
+  <line x1="802.9" y1="420" x2="902.4" y2="402" stroke="#d97706" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="847.4" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="896.6" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="907.6" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="913.0" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="904.8" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="918.5" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="872.0" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="924.0" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="902.1" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <circle cx="937.7" cy="402" r="2.7" fill="#d97706" fill-opacity="0.32" />
+  <rect x="716.6" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="798.6" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="845.1" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="744.0" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="861.5" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="768.6" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="804.1" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="834.2" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="785.0" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="847.9" y="417.7" width="4.6" height="4.6" fill="none" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="902.4" cy="402" r="5.8" fill="#d97706" stroke="white" stroke-width="1.8" />
+  <rect x="797.9" y="415.0" width="10" height="10" fill="white" stroke="#d97706" stroke-width="2.3" />
+  <text x="892.4" y="406" fill="#d97706" font-size="11.5" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">82.1%</text>
+  <text x="792.9" y="424" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#f6f8fc" stroke-width="3.5">53.7%</text>
+  <text x="35" y="469" fill="#17263c" font-size="14" font-weight="700">Fixed long BC (+270k)</text>
+  <line x1="346.7" y1="474" x2="366.9" y2="456" stroke="#b45309" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="397.3" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="359.0" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="369.9" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="378.1" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="380.9" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="348.0" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="369.9" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="345.3" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="375.4" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="345.3" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <rect x="340.3" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="340.3" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="378.6" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="345.7" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="340.3" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="345.7" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="348.5" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="343.0" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="359.4" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="302.0" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="366.9" cy="456" r="5.8" fill="#b45309" stroke="white" stroke-width="1.8" />
+  <rect x="341.7" y="469.0" width="10" height="10" fill="white" stroke="#b45309" stroke-width="2.3" />
+  <text x="376.9" y="460" fill="#b45309" font-size="11.5" font-weight="700" text-anchor="start" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">40.5%</text>
+  <text x="336.7" y="478" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">34.8%</text>
+  <line x1="841.7" y1="474" x2="916.3" y2="456" stroke="#b45309" stroke-width="1.6" stroke-opacity="0.35" />
+  <circle cx="932.2" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="913.0" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="899.4" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="913.0" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="904.8" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="904.8" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="918.5" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="924.0" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="915.8" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <circle cx="937.7" cy="456" r="2.7" fill="#b45309" fill-opacity="0.32" />
+  <rect x="842.4" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="826.0" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="757.6" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="877.9" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="858.8" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="845.1" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="798.6" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="834.2" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="905.3" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <rect x="847.9" y="471.7" width="4.6" height="4.6" fill="none" stroke="#b45309" stroke-width="1.2" stroke-opacity="0.45" />
+  <circle cx="916.3" cy="456" r="5.8" fill="#b45309" stroke="white" stroke-width="1.8" />
+  <rect x="836.7" y="469.0" width="10" height="10" fill="white" stroke="#b45309" stroke-width="2.3" />
+  <text x="906.3" y="460" fill="#b45309" font-size="11.5" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">86.1%</text>
+  <text x="831.7" y="478" fill="#53647a" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#eef3fa" stroke-width="3.5">64.8%</text>
+  <text x="595" y="538" fill="#53647a" font-size="13.5" text-anchor="middle">Held-out success rate (%) across 128 fixed reset seeds (200000–200127)</text>
+  <text x="595" y="558" fill="#53647a" font-size="12" text-anchor="middle">Reference lines are single fixed policies (one A1 start, one specialist bank), not ten independently trained teacher banks.</text>
+</svg>
