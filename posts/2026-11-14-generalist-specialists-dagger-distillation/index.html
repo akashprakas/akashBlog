@@ -378,13 +378,13 @@ ul.task-list li input[type="checkbox"] {
 <figcaption>The shared BC generalist becomes two RL specialists. Their labels train either an offline student or a DAgger student, both initialised from the same BC generalist.</figcaption>
 </figure>
 </div>
-<div class="callout callout-style-default callout-important callout-titled" title="Key findings at a glance (ten seed study, Q3 v4)">
+<div class="callout callout-style-default callout-important callout-titled" title="Key findings at a glance">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Important</span>Key findings at a glance (ten seed study, Q3 v4)
+<span class="screen-reader-only">Important</span>Key findings at a glance
 </div>
 </div>
 <div class="callout-body-container callout-body">
@@ -411,7 +411,6 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li><strong>Code:</strong> <a href="https://github.com/akashprakas/flow_policy_distillation">flow_policy_distillation on GitHub</a></li>
 </ul>
-<p>The post uses plain names, while the diagrams and saved files use these IDs:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -917,9 +916,9 @@ After:  other weighted inputs + (old_bias + task_weight)</code></pre>
 <h2 class="anchored" data-anchor-id="takeaways-compute-cost-and-limits">Takeaways, compute cost, and limits</h2>
 <ul>
 <li><strong>What held up:</strong> starting from one shared BC checkpoint, distilling RL specialists beats equal update BC by a wide margin, and student driven DAgger beats schedule matched (staged) offline distillation in SDE mode (+4.02 pp), mostly on Tool Hang.</li>
-<li><strong>What did not:</strong> DAgger did not clearly beat <em>upfront</em> offline (+0.86 pp, noisy), did not catch up to the RL specialists (8.7 pp and 23.9 pp gaps remain), did not hold its lead in ODE mode, and did not prove RL is required for Tool Hang (where long BC reached 82 to 86%).</li>
-<li><strong>Compute and wall clock cost:</strong> the final evaluation matrix has <strong>32,000 logical episode records</strong> (<strong>30,976 actually run</strong>, since monitor selected and fixed long BC picked the exact same checkpoint on seeds 108 and 110 and reused those results). All v4 jobs took <strong>34.68 hours</strong>, or <strong>40.21 hours</strong> counting <strong>5.53 hours</strong> from the archived v3 pilot (calibration and post job audits are tracked separately). Per seed, offline teacher collection (~44.8 min across both tasks) plus offline training (~12.8 min) took <strong>~57.6 min</strong>, almost the same as DAgger’s <strong>~58.1 min</strong> (short BC took ~13.7 min and long BC ~21.2 min, since most of the +20k wall time goes to periodic 64 seed monitor evaluations rather than GPU gradient steps).</li>
-<li><strong>Deployment and scope limits:</strong> the shared student needs <strong>zero critic calls at test time</strong>, which is a real simplification even though we did not benchmark wall clock latency. Everything here is conditional on one fixed BC start, one fixed specialist pair, two low dimensional state tasks, and ten paired replications.</li>
+<li><strong>What did not:</strong> DAgger did not clearly beat <em>upfront</em> offline (+0.86 pp, too close to call), did not catch up to the RL specialists (8.7 pp and 23.9 pp gaps remain), did not hold its lead in ODE mode, and did not prove RL is required for Tool Hang (where longer BC reached 82 to 86%).</li>
+<li><strong>Compute and wall clock cost:</strong> the full ten seed study ran about <strong>31,000 held out evaluation episodes</strong> and took roughly <strong>35 hours</strong> on a single GPU. Per seed, offline distillation (~45 min teacher collection + ~13 min training = <strong>~58 min</strong>) cost almost the same as DAgger (<strong>~58 min</strong>), while short BC took ~14 min and long BC ~21 min (most of the +20k wall time goes to periodic monitor evaluations rather than GPU gradient steps).</li>
+<li><strong>Deployment and scope limits:</strong> the shared student needs <strong>zero critic calls at test time</strong>, which simplifies deployment even though we did not benchmark wall clock latency. All conclusions are specific to one shared BC start, one pair of fixed specialists, two low dimensional state tasks, and ten training seeds.</li>
 </ul>
 </section>
 <section id="credits-and-related-work" class="level2">
