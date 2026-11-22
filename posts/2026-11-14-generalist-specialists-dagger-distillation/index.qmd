@@ -1,6 +1,6 @@
 ---
 title: "From a BC Generalist to RL Specialists and Back: Offline vs On Policy Distillation"
-description: "Starting from a shared BC flow policy, fine-tuning task-specific RL specialists, and consolidating them back into one generalist—comparing offline distillation vs. DAgger and why the data-arrival schedule plays a role."
+description: "Starting from a shared BC flow policy, fine tuning task specific RL specialists, and bringing them back into one generalist by using offline distillation and DAgger, and seeing why the data schedule matters."
 author: "Akash Prakash"
 date: "2026-11-20"
 categories: [RL, Flow matching, Offline distillation, On-policy distillation, DAgger]
@@ -12,242 +12,238 @@ resources:
   - v4-analysis.json
 ---
 
-The goal was to create one robot policy that could perform two manipulation tasks.
-So if we do BC on the available dataset we reach a base checkpoint with reasonable perfomance from there ,there were two questions, could a shared imitation policy provide a useful start for two RL specialists? And how could their improved behaviour be transferred back into one network?
+The goal here was simple: train one robot policy that can handle two different manipulation tasks.
 
-The second question has two plausible answers: collect demonstrations while the teachers act (**offline distillation**), or let the student act and ask the teachers what they would do at the states it visits (**on-policy distillation with DAgger-style aggregation**). We tested both at matched teacher query budgets and student training updates first in a single seed pilot across three budgets, then in a controlled ten seed followup at the largest budget.
+If you run behaviour cloning (BC) on the human demonstrations, you get a decent shared base policy. From there, two questions came up. First, can that shared BC policy give two separate RL specialists a good head start? Second, once those specialists improve, how do you bring their behaviour back into one shared network?
+
+There are two natural ways to answer the second question. You can let the teachers act and record their demonstrations (**offline distillation**), or you can let the student act and ask the teachers what they would have done at the states the student actually visits (**on policy distillation with DAgger style aggregation**). We tested both using the same number of teacher queries and student gradient updates, first in a single seed pilot across three budgets, and then in a ten seed controlled study at the largest budget.
 
 ![The shared BC generalist becomes two RL specialists. Their labels train either an offline student or a DAgger student, both initialised from the same BC generalist.](pipeline.svg)
 
-::: {.callout-important title="Key findings at a glance (ten-seed controlled follow-up, Q3 v4)"}
-- **Student-driven data beats schedule-matched offline in SDE:** in the prespecified SDE mode, DAgger beat four-stage offline distillation by **+4.02 percentage points** (paired Student-t 95% CI **[+1.71, +6.34]** across ten seeds), driven mostly by Tool Hang (**+7.34 pp**; Square **+0.70 pp**, inconclusive).
-- **Staging itself hurts offline distillation:** releasing teacher data in four stages cost **−3.16 pp** relative to upfront offline. Against *upfront* offline, DAgger was **+0.86 pp [−1.65, +3.36]** (inconclusive), not reproducing the single-seed pilot's +8.6 pp gap.
-- **Distillation beats equal-update BC, but long BC splits by task:** all distilled students beat equal-update (+20k) continuation BC by **17–21 pp** on the two-task average. Longer BC (+270k) stayed stronger than DAgger on Tool Hang (**82–86%** vs **69.1%**) while deteriorating on Square (**41%** vs **76.5%**).
-- **The round trip is incomplete and mode-sensitive:** DAgger still trails the fixed critic-free RL specialists by **8.7 pp** on Square and **23.9 pp** on Tool Hang, and its Tool Hang advantage disappears in deterministic ODE evaluation (**41.8%** vs **69.1%** SDE).
+::: {.callout-important title="Key findings at a glance"}
+- **Letting the student drive beats schedule matched offline in SDE:** in our main SDE evaluation, DAgger beat four stage offline distillation by **+4.02 percentage points** (95% paired Student t interval **[+1.71, +6.34]** across ten seeds). Almost all of that gain came from Tool Hang (**+7.34 pp**), while Square was too close to call (**+0.70 pp**).
+- **Staging the data hurts offline distillation:** revealing the same teacher data in four stages cost **−3.16 pp** compared to giving it all upfront. Against *upfront* offline, DAgger was only **+0.86 pp [−1.65, +3.36]**, which is too noisy to call and much smaller than the +8.6 pp gap from the single seed pilot.
+- **Distillation beats equal update BC, while long BC splits by task:** all three distilled students beat equal update (+20k) continuation BC by **17 to 21 pp** on the two task average. Training BC much longer (+270k) actually beat DAgger on Tool Hang (**82 to 86%** vs **69.1%**), but collapsed on Square (**41%** vs **76.5%**).
+- **The round trip is not finished, and sampling mode matters:** DAgger still trails the critic free RL specialists by **8.7 pp** on Square and **23.9 pp** on Tool Hang. Its Tool Hang edge also disappears in deterministic ODE evaluation (**41.8%** vs **69.1%** in SDE).
 :::
 
 ::: {.callout-note title="Code and experiment IDs" collapse="true"}
 - **Code:** [flow_policy_distillation on GitHub](https://github.com/akashprakas/flow_policy_distillation)
 
-Descriptive names are used throughout the text; the diagrams and evidence files use these experiment IDs:
-
 | Model or method | Experiment ID |
 |---|---|
-| Shared behaviour-cloning (BC) generalist | A1 |
-| Reinforcement-learning (RL) specialists | A2 |
+| Shared behaviour cloning (BC) generalist | A1 |
+| Reinforcement learning (RL) specialists | A2 |
 | Offline distillation, producing the **offline student** | A3 |
-| On-policy distillation (OPD) with DAgger-style dataset aggregation, producing the **DAgger student** | A4 |
+| On policy distillation (OPD) with DAgger style dataset aggregation, producing the **DAgger student** | A4 |
 :::
 
 ## Setup: tasks, shared policy, and RL specialists
 
 ### Two Robomimic tasks in one shared trunk
 
-First, a common starting policy had to work on both selected Robomimic tasks: Square and Tool Hang.
+First, we needed one starting policy that worked on both Robomimic tasks: Square and Tool Hang.
 
 | Task | Goal | State dimensions | Action chunk | Episode limit |
 |---|---|---:|---|---:|
-| Square MH | Place a square nut onto a peg | 23 | 4 consecutive 7-D actions | 400 steps |
-| Tool Hang PH | Assemble a stand/frame and hang a tool | 53 | 8 consecutive 7-D actions | 1,000 steps |
+| Square MH | Place a square nut onto a peg | 23 | 4 consecutive 7D actions | 400 steps |
+| Tool Hang PH | Assemble a stand/frame and hang a tool | 53 | 8 consecutive 7D actions | 1,000 steps |
 
-MH uses multi-human demonstrations of mixed proficiency; PH uses proficient-human demonstrations.
+MH uses mixed proficiency human demos, and PH uses proficient human demos.
 
-We first trained the generalist with behaviour cloning (BC) on human demonstrations. Its flow-matching actor learns a velocity field that transforms Gaussian noise into an action chunk, conditioned on the current state.
+We started by training the generalist with behaviour cloning on these demos. Its flow matching actor learns a velocity field that turns Gaussian noise into an action chunk, conditioned on the current state.
 
-Padding, a task tag and separate output heads let the tasks share a five-layer, 512-unit MLP. Its **143 inputs** are 53 observation slots, two task-tag slots, 56 noisy-chunk slots and 32 time features; the heads predict 28- or 56-dimensional velocities.
+To share one five layer, 512 unit MLP across both tasks, we pad the smaller inputs, append a two value task tag, and attach separate output heads. That gives **143 inputs** in total: 53 observation slots, 2 task tag slots, 56 noisy chunk slots, and 32 time features. The heads output either 28 or 56 velocity values depending on the task.
 
-![One shared trunk, two task-specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy-chunk values to 56, uses task tag [1, 0], and runs only the 28-output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56-output head.](shared-architecture.svg){#fig-shared-architecture fig-alt="Four input groups (53 observation slots, a two-value task tag, 56 noisy-chunk slots and 32 time features) concatenate into 143 inputs to five shared 512-unit GELU layers. Separate heads output 28-dimensional Square or 56-dimensional Tool Hang velocities; only the current task's head runs."}
+![One shared trunk, two task specific velocity heads. This Square sample pads 23 observations to 53 and 28 noisy chunk values to 56, uses task tag [1, 0], and runs only the 28 output Square head. Tool Hang fills both input groups without padding, uses [0, 1], and runs only its 56 output head.](shared-architecture.svg){#fig-shared-architecture fig-alt="Four input groups (53 observation slots, a two value task tag, 56 noisy chunk slots and 32 time features) concatenate into 143 inputs to five shared 512 unit GELU layers. Separate heads output 28 dimensional Square or 56 dimensional Tool Hang velocities; only the current task's head runs."}
 
-Each update draws 256 examples per task, averages the two task losses, and updates the network once. Each head learns from its own task; the trunk learns from both.
+Every training step draws 256 examples per task, averages the two losses, and updates the network once. Each head only sees its own task, while the trunk learns from both.
 
-**How actions are sampled (SDE vs. ODE).** Both sampling modes start from Gaussian noise and take ten integration steps. **SDE** (stochastic differential equation) sampling adds noise during integration and uses **EMA** (exponential moving average) actor weights. **ODE** (ordinary differential equation) sampling adds no integration noise and uses the current, non-averaged weights; its intermediate-action clipping convention also differs. Because multiple factors differ at once, an SDE-versus-ODE gap does not isolate the effect of integration noise alone.
+**How actions are sampled (SDE vs. ODE).** Both modes start from Gaussian noise and take ten integration steps. **SDE** (stochastic differential equation) adds tapered noise along the way and uses **EMA** (exponential moving average) weights. **ODE** (ordinary differential equation) adds no noise after the initial draw, uses the raw online weights instead of EMA, and skips intermediate action clipping. Because all of these change together (and training uses a constant learning rate with no decay), the gap between SDE and ODE is not just about noise.
 
 ::: {.callout-note title="Observation standardisation pitfall" collapse="true"}
-The shared start did not work immediately. Under per-dimension standardisation, Tool Hang stayed at 0/64 across all evaluations despite falling imitation loss. Switching to raw observations restored learning, though later measurements did not reproduce the original numerical explanation; the exact mechanism remains open.
+The shared start did not work right away. When we standardised observations per dimension, Tool Hang stayed stuck at 0/64 across every evaluation even as the training loss went down. Switching back to raw observations fixed it, though later checks did not reproduce our first numerical explanation, so the exact cause is still open.
 :::
 
-After shared BC training, the generalist reached **65.6% Square and 53.1% Tool Hang SDE success** at 230k updates a working starting point, not a finished generalist.
+After 230k updates of shared BC, the base policy reached **65.6% on Square and 53.1% on Tool Hang** in SDE mode. That was a solid starting point, not a finished generalist.
 
 ### Exporting and specialising with RL
 
-Rather than discard the BC generalist's learned representation, we exported task-specific copies and fine-tuned each independently with OGPO RL for **one million environment steps**, producing two RL specialists. Export keeps the selected output head, drops always-zero padded inputs, and folds the fixed task tag into the firstlayer bias preserving the initial function apart from roundoff while stopping weight sharing during RL.
+Instead of throwing away what the BC generalist learned, we exported a separate copy for each task and fine tuned each one with OGPO RL for **one million environment steps**. Exporting keeps that task's output head, drops the always zero padded inputs, and folds the fixed task tag into the first layer bias. That keeps the exact same function at step zero (up to floating point rounding) while letting the two specialists diverge during RL.
 
 ::: {.callout-note title="Specialist export mechanics and code provenance" collapse="true"}
-Folding the fixed task tag into the first-layer bias produces 83-input Square and 141-input Tool Hang actors:
+Folding the fixed task tag into the first layer bias gives an 83 input Square actor and a 141 input Tool Hang actor:
 
 ```text
 Before: other weighted inputs + task_weight * 1 + old_bias
 After:  other weighted inputs + (old_bias + task_weight)
 ```
 
-The 83- and 141-input actors came from the original study's specialist exporter. The linked repository's [shared-evaluation helper](https://github.com/akashprakas/flow_policy_distillation/blob/main/core/models.py) retains the padded observation and task tag; it is a separate interface, not the full specialist export described above.
+Those 83 and 141 input actors came from the original study's specialist exporter. The [shared evaluation helper](https://github.com/akashprakas/flow_policy_distillation/blob/main/core/models.py) in the repo keeps the padded observation and task tag; it is a separate interface, not the full specialist export above.
 :::
 
-Each specialist gets a newly initialised ten-head critic ensemble. When generating distillation labels, its EMA actor proposes eight SDE chunks. All ten target critic heads evaluate each candidate; the **minimum of two randomly sampled heads, with replacement**, determines that candidate's score. The highest-scoring candidate becomes the teacher label (**Best-of-8**): 80 head-values per query, often batched.
+Each specialist also gets a fresh ten head critic ensemble. When we query a teacher for a distillation label, its EMA actor proposes eight SDE action chunks. All ten target critic heads score each candidate, and each candidate's value is the **minimum of two randomly sampled heads (with replacement)**. The highest scoring chunk becomes the teacher label (**Best of 8**), which takes 80 head evaluations per query, usually batched.
 
-Actor-only evaluations on the pilot's 64-seed bank suggested RL specialisation helped, though a long-BC control immediately complicated the picture:
+Actor only evaluations on the pilot's 64 seed bank looked promising for RL, until we ran a longer BC baseline:
 
-| Reference policy (pilot 64-seed bank) | Square SDE | Tool Hang SDE |
+| Reference policy (pilot 64 seed bank) | Square SDE | Tool Hang SDE |
 |---|---:|---:|
 | Shared BC generalist, 230k updates | 42/64 = 65.6% | 34/64 = 53.1% |
-| RL specialists, critic-free | 57/64 = 89.1% | 58/64 = 90.6% |
+| RL specialists, critic free | 57/64 = 89.1% | 58/64 = 90.6% |
 | Long BC, fresh run to 500k updates | 19/64 = 29.7% | 58/64 = 90.6% |
 
-Fresh shared BC trained to 500k also reached **90.6% on Tool Hang**, while dropping to **29.7% on Square**. The RL specialist's Tool Hang gain over the 230k generalist therefore did not establish that RL was necessary that starting checkpoint was simply under-trained on Tool Hang. But while Tool Hang improved sqaure perfomance dropped.
+A fresh shared BC run trained to 500k also hit **90.6% on Tool Hang**, while dropping all the way to **29.7% on Square**. So the RL specialist beating the 230k generalist on Tool Hang didn't prove RL was necessary; the 230k checkpoint was just under trained on Tool Hang. At the same time, pushing shared BC longer clearly hurt Square.
 
-## Two distillation Paths: Offline vs Routed DAgger
+## Two distillation paths: Offline vs Routed DAgger
 
-Two RL specialists were not the final goal. To consolidate them back into one network, we started each shared student from **the BC generalist's 230k-update checkpoint**, with the fixed specialists supplying action targets. Their weights are **not merged**.
+Keeping two separate specialists was not the end goal. To bring both skills back into one network, we started each shared student from the **230k BC generalist checkpoint** and used the fixed specialists only to produce target chunks. No weights are merged.
 
-- **Offline distillation** lets the teachers drive and records their state–chunk pairs before student training begins.
-- **On-policy distillation with DAgger-style dataset aggregation** (shortened to **DAgger** below) lets the student drive, asking the matching teacher for a label at each decision state while executing its own chunk. Collection follows the current student, while training reuses labels accumulated from earlier rounds too.
+- **Offline distillation** lets the teachers drive the environment and saves their state and action chunk pairs before student training starts.
+- **On policy distillation with DAgger style aggregation** (just called **DAgger** below) lets the student drive. At every decision state, the student executes its own chunk while the matching teacher labels that same state. New labels come from the current student, and training samples from everything collected across all rounds so far.
 
-Why might this matter? A student's errors can lead to states a capable teacher rarely visits. More teacher demonstrations might not cover them; DAgger puts advice there and that motivatd the experiment.
+Why should this matter? When a student makes small mistakes, it drifts into states a strong teacher rarely sees. Collecting more teacher rollouts may never cover those recovery states, while DAgger puts teacher labels right where the student actually ends up. That was the motivation for the experiment.
 
 ![Offline collection executes teacher chunks. DAgger collection executes student chunks and saves the teacher's recommendation at the same state.](collection.svg)
 
-| Collection / training choice | Offline distillation | On-policy distillation with DAgger aggregation |
+| Collection / training choice | Offline distillation | On policy distillation with DAgger aggregation |
 |---|---|---|
-| Who acts in the simulator? | Teacher | Current student's EMA actor, single-sample SDE |
-| Who supplies target chunks? | Matching task's fixed specialist (Best-of-8) | Matching task's fixed specialist (Best-of-8) |
+| Who acts in the simulator? | Teacher | Current student's EMA actor, single sample SDE |
+| Who supplies target chunks? | Matching task's fixed specialist (Best of 8) | Matching task's fixed specialist (Best of 8) |
 | When do labels arrive? | Full dataset before training | Roughly one quarter before each of four rounds |
-| Which examples are retained? | All pairs in the chosen prefix, including failures | All labelled states, including failed or budget-cut episodes |
-| Human demos mixed into distillation? | No; teacher-labelled data only | No; teacher-labelled data only |
+| Which examples are retained? | All pairs in the chosen prefix, including failures | All labelled states, including failed or budget cut episodes |
+| Human demos mixed into distillation? | No; teacher labelled data only | No; teacher labelled data only |
 | Student updates per run | 20,000 | Four blocks of 5,000 |
 
-In the code in the shared repo student driven method is called "routed DAgger": routing is just a task-ID lookup. The DAgger student **never executes the teacher's chunk**. Each round collects pairs, then trains on the accumulated pool; it is not one episode. Both students use supervised flow matching (256 pairs per task per update, Adam at lr `0.0003` with fresh moments), not RL reward updates.
+In the repo, the student driven script is called "routed DAgger", where routing just means picking the right task head and teacher by task ID. The DAgger student **never executes the teacher's chunk**. Each round collects a batch of labelled states and then trains on the growing pool. Both methods use the exact same supervised flow matching loss (256 pairs per task per step, constant Adam lr `0.0003` with fresh moments), with no RL reward updates.
 
-To compare these choices fairly, we matched teacher queries. **One query returns one labelled chunk at one state**, not one scalar action or one episode:
+To keep the comparison fair, we matched the number of teacher queries. **One query means one labelled action chunk at one state**, not a single step or a full episode:
 
 | Budget per task | Square pairs | Tool Hang pairs | Student gradient updates |
 |---|---:|---:|---:|
-| Q1, approximately 2k | 1,998 | 1,983 | 20,000 |
-| Q2, approximately 8k | 7,998 | 7,969 | 20,000 |
-| Q3, approximately 32k | 31,980 | 31,994 | 20,000 |
+| Q1, about 2k | 1,998 | 1,983 | 20,000 |
+| Q2, about 8k | 7,998 | 7,969 | 20,000 |
+| Q3, about 32k | 31,980 | 31,994 | 20,000 |
 
-Q1 therefore means roughly 2k pairs **for each task** (~4k combined). Offline collection uses nested whole-episode prefixes; DAgger matches their counts, cutting the last episode if needed. **Each budget restarts from the same 230k BC generalist checkpoint.**
+So Q1 means roughly 2k pairs **for each task** (~4k total). Offline distillation takes nested whole episode prefixes, and DAgger matches those exact counts, cutting the last episode short if needed. **Every budget starts fresh from the same 230k BC checkpoint.**
 
-If we look into the LLMS similarity, offline distillation resembles supervised fine-tuning (SFT) on teacher responses; DAgger resembles on-policy distillation at student-generated prefixes. States correspond to prefixes, though losses differ. [GKD](https://arxiv.org/abs/2306.13649) explicitly connects this idea to [DAgger](https://arxiv.org/abs/1011.0686).
+If you think in LLM terms, offline distillation is like supervised fine tuning (SFT) on teacher completions, while DAgger is like on policy distillation on student generated prefixes. States act like prefixes, even though the loss is different. [GKD](https://arxiv.org/abs/2306.13649) draws this exact connection back to [DAgger](https://arxiv.org/abs/1011.0686).
 
-## What the single-seed pilot suggested
+## What the single seed pilot suggested
 
-*Note: this part uses a single training seed and 64 evaluation seeds per task. It motivated the next part [ten-seed controlled follow-up](#controlled-q3-follow-up) .*
+*Note: this pilot used one training seed and 64 evaluation seeds per task. It was the reason we ran the [ten seed controlled study](#controlled-q3-follow-up) next.*
 
-At the smallest budget (Q1), letting the student drive backfired on Square: the offline student finished at **43/64**, while the DAgger student fell to **15/64**, well below the 230k BC start. With more labels, the Square ranking flipped, and at Q3 the student-driven recipe had higher point estimates on both tasks—though Tool Hang resisted a simple "offline first, DAgger later" rule (DAgger led at Q1, trailed at Q2, and led at Q3).
+At the smallest budget (Q1), letting the student drive backfired badly on Square: offline finished at **43/64**, while DAgger dropped to **15/64**, far below the 230k BC start. With more data, Square flipped, and by Q3 DAgger was ahead on both tasks. Tool Hang didn't follow a clean pattern either: DAgger led at Q1, fell behind at Q2, and led again at Q3.
 
-![Saved SDE success counts and Wilson intervals for the offline and DAgger students across three separate query-budget runs per method.](budget-results.svg)
+![Saved SDE success counts and Wilson intervals for the offline and DAgger students across three separate query budget runs per method.](budget-results.svg)
 
-| Task, pilot Q3 single-sample SDE | Offline student | DAgger student | Observed DAgger minus offline |
+| Task, pilot Q3 single sample SDE | Offline student | DAgger student | DAgger minus offline |
 |---|---:|---:|---:|
 | Square | 51/64 = 79.7% | 56/64 = 87.5% | +7.8 percentage points |
 | Tool Hang | 43/64 = 67.2% | 49/64 = 76.6% | +9.4 percentage points |
 
-At Q3, the DAgger student came within one episode of the critic-free Square specialist (**57/64**; critic-guided teacher **62/64**), while remaining below both the RL specialist and long BC (**58/64**) on Tool Hang.
+At Q3, the DAgger student got within one episode of the critic free Square specialist (**57/64**; Best of 8 teacher **62/64**), while still trailing both the RL specialist and long BC (**58/64**) on Tool Hang.
 
-### Why the results were not concrete 
+### Why the pilot was not enough
 
-Three issues stopped us from reading the pilot's +8.6 pp average Q3 gap as proof that student-state coverage wins:
+Three big holes kept us from taking that +8.6 pp average Q3 gap at face value:
 
-1. **Data-arrival schedule confound.** Offline distillation sees its full dataset before update 1. DAgger receives roughly one quarter before each 5,000-update block, while Adam and EMA state carry forward. At Q1, round 0 trains for 5,000 updates on just 499 Square pairs (`5,000 × 256 / 499 ≈ 2,565` draws per pair); over the full run, a round-0 pair gets ~**5,343** expected draws versus ~**641** for a round-3 pair. Without a **schedule-matched (staged) offline control**, state source and data-arrival schedule changed together.
-2. **Missing matched BC controls.** The fresh 500k BC run was not a matched continuation from the 230k checkpoint on the same device and optimiser recipe.
-3. **Single training seed and marginal intervals.** The 64 evaluation seeds do not measure retraining variability, and the saved summaries lacked per-episode outcomes for paired tests.
+1. **The data schedule confound.** Offline distillation gets all its data before step 1. DAgger gets one quarter before each 5,000 step block while Adam and EMA keep running. At Q1, round 0 runs 5,000 updates on just 499 Square pairs (`5,000 × 256 / 499 ≈ 2,565` draws per pair). By the end of the run, a round 0 pair has been sampled ~**5,343** times while a round 3 pair only gets ~**641** draws. Without a **staged offline** baseline that follows the same four round schedule, we couldn't tell whether the difference came from which states were visited or how the data arrived.
+2. **No matched BC controls.** The fresh 500k BC run was trained from scratch, not continued from the 230k checkpoint with the same optimiser setup.
+3. **Only one training seed.** 64 evaluation episodes tell you nothing about how much results bounce around across training seeds, and the pilot only saved summary counts rather than per episode outcomes.
 
-![Schematic of the Q1 DAgger run's four collect-aggregate-train rounds and cumulative per-task pools, not a robot rollout.](dagger-rounds.gif)
+![Schematic of the Q1 DAgger run's four collect, aggregate, and train rounds with cumulative per task pools, not a robot rollout.](dagger-rounds.gif)
 
 *Schematic, not a robot rollout. Exact counts come from the saved Q1 DAgger run. [Static alternative](dagger-rounds.svg).*
 
 ## What held up across ten seeds with a matched schedule {#controlled-q3-follow-up}
 
- To separate state source, staging schedule, and extra BC training, we ran ten paired replications (**seeds 101–110**) at the Q3 budget using the same fixed 230k BC start and specialist bank. This replicates student training and data collection, **not ten independently trained RL teacher banks**.
+To untangle state coverage, data staging, and extra BC training, we ran ten paired replications (**seeds 101 to 110**) at the Q3 budget, all starting from the same fixed 230k BC checkpoint and using the same fixed specialists. This measures variation in student training and data collection, **not ten separate RL teacher runs**.
 
-Each replication trained five shared students from the identical restored current/EMA BC weights with fresh Adam:
+Every seed trained five shared students from the exact same restored current and EMA weights, each starting with fresh Adam moments (since the saved 230k milestone did not include optimiser state):
 
-- **Short continuation BC (+20k):** 20k updates on the original human demonstrations.
-- **Upfront offline (+20k):** full last-whole-episode teacher prefix (≤32k pairs/task) available from step 0.
-- **Staged offline (+20k):** the same teacher prefix revealed in four pools matching DAgger's 4 × 5k schedule.
-- **DAgger (+20k):** student-driven collection across four rounds matching that replication's exact prefix counts.
-- **Long BC (+270k):** continued BC on human demonstrations, evaluating both the fixed +270k endpoint and a **monitor-selected** joint policy chosen from `+20k/+70k/+170k/+270k` via equal-weight two-task SDE average on monitor seeds `10000–10063` (earliest wins ties).
+- **Short continuation BC (+20k):** 20k more updates on the original human demos.
+- **Upfront offline (+20k):** the full teacher prefix (≤32k pairs per task) available from step 0.
+- **Staged offline (+20k):** the exact same teacher prefix, revealed in four blocks matching DAgger's 4 × 5k schedule.
+- **DAgger (+20k):** four rounds of student driven collection matching that seed's exact prefix counts.
+- **Long BC (+270k):** continued BC on human demos, reporting both the fixed +270k checkpoint and a **monitor selected** checkpoint picked from `+20k/+70k/+170k/+270k` by two task average SDE success on monitor seeds `10000 to 10063` (earliest wins ties).
 
 ### Primary SDE result: DAgger beats staged offline, not upfront offline
 
-The primary contrast was **DAgger minus staged offline** in SDE mode, averaging Square and Tool Hang equally within each replication first. Across the ten seeds (**n=10, df=9**):
+Our main comparison was **DAgger minus staged offline** in SDE mode, taking the equal weight two task average within each seed first. Across the ten seeds (**n=10, df=9**):
 
-- **Primary (two-task average):** **+4.02 percentage points**, paired Student-t 95% CI **[+1.71, +6.34]**, sample SD **3.24 pp**.
-  - **Square:** **+0.70 pp [−1.75, +3.15]** (inconclusive, not equivalence).
+- **Main comparison (two task average):** **+4.02 percentage points**, 95% paired Student t interval **[+1.71, +6.34]**, sample SD **3.24 pp**.
+  - **Square:** **+0.70 pp [−1.75, +3.15]** (too close to call, not proof they are equal).
   - **Tool Hang:** **+7.34 pp [+3.89, +10.80]**.
-- **Staging penalty (exploratory, staged minus upfront offline):** **−3.16 pp [−5.74, −0.59]** on the two-task average (Square −2.66 pp, Tool Hang −3.67 pp).
-- **DAgger minus upfront offline (exploratory):** **+0.86 pp [−1.65, +3.36]** on the two-task average 
+- **Staging penalty (staged minus upfront offline, exploratory):** **−3.16 pp [−5.74, −0.59]** on the two task average (Square −2.66 pp, Tool Hang −3.67 pp).
+- **DAgger minus upfront offline (exploratory):** **+0.86 pp [−1.65, +3.36]** on the two task average.
 
-![Ten-seed paired SDE contrasts (Q3 v4) showing individual seed differences and Student-t 95% confidence intervals across the two-task average, Square MH, and Tool Hang PH.](v4-contrasts.svg)
+![Ten seed paired SDE contrasts (Q3 v4) showing individual seed differences and Student t 95% confidence intervals across the two task average, Square MH, and Tool Hang PH.](v4-contrasts.svg)
 
+Matching the schedule changed the story. With this BC start and these two specialists, letting the student drive clearly beats staged offline distillation on average, driven almost entirely by Tool Hang. Yet staging itself hurt offline distillation by 3.2 pp (likely because early rounds over train on a quarter of the data while round 3 pairs only get ~40 draws instead of ~160). Once you compare against *upfront* offline, the ten seed study does **not** reproduce the single seed pilot's +8.6 pp gap.
 
-Matching the schedule therefore changed the comparator. Conditional on this BC start, fixed specialists, two tasks, and evaluation bank, the primary result supports a positive average effect of the adaptive DAgger recipe over schedule matched offline mostly on Tool Hang. However, because staging itself hurt offline distillation by 3.2 pp, the ten-seed study does **not** reproduce the single seed's +8.6 pp gap over *upfront* offline, nor does it establish universal superiority of student-driven acquisition or isolate recovery-state coverage as the mechanism.
+### All six methods and the long BC trade off
 
+Mean held out **SDE success across ten trained shared policies** (128 episodes per task):
 
-### All six methods and the long-BC trade-off
-
-Mean held-out **SDE success across ten trained shared policies** (128 episodes per task):
-
-| Method | Square | Tool Hang | Equal-weight two-task average |
+| Method | Square | Tool Hang | Equal weight two task average |
 |---|---:|---:|---:|
 | Short continuation BC (+20k) | 57.42% | 45.94% | 51.68% |
 | Upfront offline (+20k) | 78.44% | 65.39% | 71.91% |
 | Staged offline (+20k) | 75.78% | 61.72% | 68.75% |
 | DAgger (+20k) | 76.48% | 69.06% | 72.77% |
-| Monitor-selected long BC | 40.86% | 82.11% | 61.48% |
+| Monitor selected long BC | 40.86% | 82.11% | 61.48% |
 | Fixed long BC (+270k) | 40.55% | 86.09% | 63.32% |
 
-![Held-out SDE and ODE success rates across all six methods in Q3 v4, with individual seed dots and fixed A1/A2 SDE reference lines.](v4-methods.svg)
+![Held out SDE and ODE success rates across all six methods in Q3 v4, with individual seed dots and fixed A1/A2 SDE reference lines.](v4-methods.svg)
 
-Two controls stand out:
+Two things jump out from the controls:
 
-- **Teacher supervision vs. equal-update BC:** all three distillation arms beat equal-update (+20k) continuation BC by **17–21 pp** on the two-task average. Short BC's Square mean (**57.4%**) is below the fixed A1 start (**65.6%**) on these held-out seeds; continuation combines extra human-demo updates with a fresh Adam restart, and this study does not isolate the cost of restarting the optimiser. Every +20k arm shared that same restart.
-- **The long-BC task trade-off (key secondary contrast, exploratory/unadjusted):** DAgger beat monitor-selected long BC by **+11.29 pp [+8.73, +13.85]** on the two-task average, but that average hides opposite task effects: **Square favoured DAgger by +35.63 pp [+31.63, +39.62]**, whereas **Tool Hang favoured long BC by 13.05 pp** (DAgger minus long BC: **−13.05 pp [−20.62, −5.47]**). Sufficiently trained BC therefore remains a strong Tool Hang alternative; this result is an average gain over jointly selected BC candidates, **not proof that RL is necessary**. Square's long-BC deterioration is consistent with overfitting or task interference, which this study did not separate.
+- **Teacher labels vs. equal update BC:** all three distillation runs beat equal update (+20k) continuation BC by **17 to 21 pp** on the two task average. Short BC actually dropped below the fixed A1 start on Square (**57.4%** vs **65.6%**) on these held out seeds. That could partly be the fresh Adam restart on pretrained weights, though every +20k arm paid that same restart.
+- **The long BC task split (exploratory):** DAgger beat monitor selected long BC by **+11.29 pp [+8.73, +13.85]** on the two task average, but the two tasks pull in opposite directions. **Square favoured DAgger by +35.63 pp [+31.63, +39.62]**, while **Tool Hang favoured long BC by 13.05 pp** (DAgger minus long BC: **−13.05 pp [−20.62, −5.47]**). So on Tool Hang, simply training BC longer is still a very strong option, and beating long BC on average does not prove RL was needed. Why Square fell apart under long BC (overfitting vs. task interference) is still an open question.
 
 ### How much of the round trip was completed?
 
-| Held-out SDE reference (seeds 200000–200127) | Square | Tool Hang |
+| Held out SDE reference (seeds 200000 to 200127) | Square | Tool Hang |
 |---|---:|---:|
 | Fixed A1 start (230k) | 84/128 = 65.6% | 51/128 = 39.8% |
 | Fixed specialists, no critic | 109/128 = 85.2% | 119/128 = 93.0% |
-| Fixed specialists, Best-of-8 | 116/128 = 90.6% | 114/128 = 89.1% |
-| DAgger, mean over ten student/collection seeds | 76.5% | 69.1% |
+| Fixed specialists, Best of 8 | 116/128 = 90.6% | 114/128 = 89.1% |
+| DAgger, mean over ten seeds | 76.5% | 69.1% |
 
-Consolidation remains incomplete: DAgger trails the critic-free specialists by **8.7 pp on Square and 23.9 pp on Tool Hang**. On Tool Hang, Best-of-8 scored below plain SDE (**89.1% vs. 93.0%**) in this single fixed-teacher evaluation; critic-guided selection is not guaranteed to improve success. Because these references use held-out seeds `200000–200127` and the v4 failure boundary rather than the pilot's 64-seed bank, percentage differences from the pilot do not reflect additional teacher training.
+The student still has a ways to go: DAgger trails the critic free specialists by **8.7 pp on Square and 23.9 pp on Tool Hang**. Interestingly, Best of 8 scored slightly lower than plain SDE on Tool Hang (**89.1% vs. 93.0%**) on this fixed teacher run, showing that critic ranking does not always boost success.
 
 ### Secondary ODE outcome: the Tool Hang advantage disappears
 
-Mean held-out **ODE success across ten student/collection seeds** (all six arms, matching the SDE table above):
+Mean held out **ODE success across ten seeds** (all six arms, matching the SDE table above):
 
-| Method | Square | Tool Hang | Equal-weight two-task average |
+| Method | Square | Tool Hang | Equal weight two task average |
 |---|---:|---:|---:|
 | Short continuation BC (+20k) | 49.38% | 30.55% | 39.96% |
 | Upfront offline (+20k) | 71.56% | 55.55% | 63.55% |
 | Staged offline (+20k) | 70.47% | 44.22% | 57.34% |
 | DAgger (+20k) | 67.34% | 41.80% | 54.57% |
-| Monitor-selected long BC | 35.78% | 53.67% | 44.73% |
+| Monitor selected long BC | 35.78% | 53.67% | 44.73% |
 | Fixed long BC (+270k) | 34.77% | 64.77% | 49.77% |
 
-In ODE mode, the exploratory DAgger-minus-staged-offline contrast flips to **−2.77 pp [−12.12, +6.57]** (inconclusive, not equivalence), and upfront offline leads the distilled arms at **63.55%**. DAgger's Tool Hang ODE mean drops to **41.8%** (versus **69.1%** in SDE), with individual seeds spanning **16/128 to 84/128**.
+In ODE mode, DAgger minus staged offline flips to **−2.77 pp [−12.12, +6.57]** (too noisy to call), and upfront offline leads all distilled arms at **63.55%**. DAgger's Tool Hang ODE average drops to **41.8%** (down from **69.1%** in SDE), with individual seeds swinging wildly from **16/128 to 84/128**.
 
-The positive Tool Hang contrast against staged offline is therefore specific to the prespecified SDE mode. DAgger collected states using its EMA-SDE driving policy, which could help explain mode sensitivity.
-
+So the Tool Hang win over staged offline only shows up in SDE mode. Two likely reasons are that DAgger collected its states with the EMA SDE policy, and that ODE evaluates raw online weights trained with a constant learning rate (`0.0003`, no decay), which bounce around much more than EMA weights.
 
 ## Takeaways, compute cost, and limits
 
-- **What this study supports:** starting from one shared BC checkpoint, distilling RL specialists beats equal-update BC substantially on average, and student-driven DAgger outperforms schedule-matched (staged) offline distillation in SDE mode (+4.02 pp), driven by Tool Hang.
-- **What it does not support:** universal superiority of DAgger over *upfront* offline (+0.86 pp, inconclusive), equivalence to the RL specialists (8.7 pp / 23.9 pp gaps remain), superiority in ODE mode, or proof that RL is necessary for Tool Hang (where long BC reached 82–86%).
-- **Compute and wall-clock cost:** the final matrix contains **32,000 logical episode records** (**30,976 actually executed**, because monitor-selected and fixed long BC were byte-identical for seeds 108 and 110 and reused results rather than counting as extra independent evidence). V4 jobs took **34.68 hours**; cumulative job-wall cost was **40.21 hours**, including **5.53 hours** of preserved v3 work (calibration and post-job audits are separate; the six-hour reserve was an allowance, not measured work). Per seed, offline teacher collection (~44.8 min across both tasks) plus offline training (~12.8 min) totalled **~57.6 min**, virtually identical to DAgger's **~58.1 min** per seed (compared to ~13.7 min for short BC and ~21.2 min for long BC).
-- **Deployment and scope limits:** the shared student makes **zero critic calls at deployment**—a structural saving, not a measured latency speedup. All conclusions remain conditional on one fixed BC start, one fixed specialist bank, two low-dimensional state tasks, and ten paired student/collection replications. The Student-t interval assumes approximately normal independent replication differences; secondary contrasts remain exploratory.
+- **What held up:** starting from one shared BC checkpoint, distilling RL specialists beats equal update BC by a wide margin, and student driven DAgger beats schedule matched (staged) offline distillation in SDE mode (+4.02 pp), mostly on Tool Hang.
+- **What did not:** DAgger did not clearly beat *upfront* offline (+0.86 pp, too close to call), did not catch up to the RL specialists (8.7 pp and 23.9 pp gaps remain), did not hold its lead in ODE mode, and did not prove RL is required for Tool Hang (where longer BC reached 82 to 86%).
+- **Compute and wall clock cost:** the full ten seed study ran about **31,000 held out evaluation episodes** and took roughly **35 hours** on a single GPU. Per seed, offline distillation (~45 min teacher collection + ~13 min training = **~58 min**) cost almost the same as DAgger (**~58 min**), while short BC took ~14 min and long BC ~21 min (most of the +20k wall time goes to periodic monitor evaluations rather than GPU gradient steps).
+- **Deployment and scope limits:** the shared student needs **zero critic calls at test time**, which simplifies deployment even though we did not benchmark wall clock latency. All conclusions are specific to one shared BC start, one pair of fixed specialists, two low dimensional state tasks, and ten training seeds.
 
 ## Credits and related work
 
-This study builds on existing methods and open-source tools:
+This study builds on existing methods and open source tools:
 
-- **RLDG — Charles Xu, Qiyang Li, Jianlan Luo and Sergey Levine (2024).** [*RLDG: Robotic Generalist Policy Distillation via Reinforcement Learning*](https://arxiv.org/abs/2412.09858) studies using task-specific RL to generate training data for generalist policies, providing closely related work for the specialist-to-generalist pipeline.
-- **Multi-teacher flow-policy OPD — Lichao Ni, Yuhan Liu, Pengfei Li and Guanghuan Fang (2026).** [*Multi-Teacher On-Policy Distillation for Flow-Based Vision-Language-Action Models*](https://arxiv.org/abs/2610.21522) is the closest related comparison identified in the [P2 protocol](p2-protocol.txt). Its proposed method also supervises teacher velocities along student-generated action flows. This pilot instead uses low-dimensional observations and critic-selected action-chunk labels, followed by supervised flow matching.
-- **OGPO — Sarvesh Patil et al. (2026).** [*OGPO: Sample Efficient Full-Finetuning of Generative Control Policies*](https://arxiv.org/abs/2605.03065) provides the RL fine-tuning method and base implementation used for the specialists. See the [original implementation](https://github.com/simchowitzlabpublic/OGPO_public) and the [fork used in this study](https://github.com/akashprakas/OGPO_public).
-- **DAgger — Stephane Ross, Geoffrey J. Gordon and J. Andrew Bagnell (2011).** [*A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning*](https://arxiv.org/abs/1011.0686) introduces the learner-driven expert-labelling and dataset-aggregation approach used in the student-driven distillation recipe.
-- **GKD — Rishabh Agarwal et al. (ICLR 2024).** [*On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes*](https://arxiv.org/abs/2306.13649) provides the language-model connection discussed above. This study uses supervised flow-matching targets, not GKD's language-model loss.
-- **Robomimic and Robosuite — the ARISE Initiative teams.** [Robomimic](https://robomimic.github.io/) provides the human-demonstration datasets and learning framework; [Robosuite](https://robosuite.ai/) provides the simulated manipulation environments used for Square and Tool Hang.
+- **RLDG (Charles Xu, Qiyang Li, Jianlan Luo and Sergey Levine, 2024):** [*RLDG: Robotic Generalist Policy Distillation via Reinforcement Learning*](https://arxiv.org/abs/2412.09858) uses task specific RL to generate training data for generalist policies, closely related to the specialist to generalist pipeline here.
+- **Multi teacher flow policy OPD (Lichao Ni, Yuhan Liu, Pengfei Li and Guanghuan Fang, 2026):** [*Multi-Teacher On-Policy Distillation for Flow-Based Vision-Language-Action Models*](https://arxiv.org/abs/2610.21522) is the closest related comparison in the [P2 protocol](p2-protocol.txt). Their method also supervises teacher velocities along student generated action flows, whereas this experiment uses low dimensional states and critic selected action chunk labels with standard flow matching.
+- **OGPO (Sarvesh Patil et al., 2026):** [*OGPO: Sample Efficient Full-Finetuning of Generative Control Policies*](https://arxiv.org/abs/2605.03065) provides the RL fine tuning algorithm and codebase used for the specialists. See the [original implementation](https://github.com/simchowitzlabpublic/OGPO_public) and the [fork used in this study](https://github.com/akashprakas/OGPO_public).
+- **DAgger (Stephane Ross, Geoffrey J. Gordon and J. Andrew Bagnell, 2011):** [*A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning*](https://arxiv.org/abs/1011.0686) introduced the student driven expert labelling and dataset aggregation loop used here.
+- **GKD (Rishabh Agarwal et al., ICLR 2024):** [*On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes*](https://arxiv.org/abs/2306.13649) connects this idea to language models, though this study uses flow matching targets rather than GKD's language model loss.
+- **Robomimic and Robosuite (ARISE Initiative):** [Robomimic](https://robomimic.github.io/) provides the human demo datasets and framework; [Robosuite](https://robosuite.ai/) provides the Square and Tool Hang simulation environments.
 
